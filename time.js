@@ -31,8 +31,36 @@
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
+  // Fixed format regardless of browser locale: "2026/10/28 18:15".
+  const pad = (n) => String(n).padStart(2, "0");
+  function formatTime(ms) {
+    const d = new Date(ms);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
   function formatWhen(ms) {
-    return new Date(ms).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const d = new Date(ms);
+    return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${formatTime(ms)}`;
+  }
+
+  // Chat message id from a reminder's saved link (/room/<space>/<topic>/<message>), or "" for a space/DM link.
+  function messageIdOf(url) {
+    const m = /\/room\/[^/]+\/[^/]+\/([A-Za-z0-9_-]{8,16})(?:[?#]|$)/.exec(url || "");
+    return m ? m[1] : "";
+  }
+
+  // Labels for messages with an active reminder: { messageId: { text, overdue } }, nearest reminder per message.
+  function reminderLabels(reminders, now, fmt = formatWhen) {
+    const nearest = {};
+    for (const r of Object.values(reminders || {})) {
+      const id = !r.done && messageIdOf(r.url);
+      if (id && (!nearest[id] || r.when < nearest[id].when)) nearest[id] = r;
+    }
+    const out = {};
+    for (const [id, r] of Object.entries(nearest)) {
+      const overdue = r.when <= now;
+      out[id] = { text: `${overdue ? "Reminder due" : "Reminder set for"} ${fmt(r.when)}`, overdue };
+    }
+    return out;
   }
 
   const QUARTER = 15 * MIN;
@@ -49,7 +77,7 @@
     for (let m = 0; m < 24 * 60; m += 15) {
       const o = document.createElement("option");
       o.value = String(m);
-      o.textContent = new Date(2000, 0, 1, 0, m).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      o.textContent = formatTime(new Date(2000, 0, 1, 0, m).getTime());
       time.appendChild(o);
     }
     el.append(date, time);
@@ -89,6 +117,6 @@
     return svg;
   }
 
-  root.RTime = { icon, PRESETS, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, ceilQuarter, createPicker };
+  root.RTime = { icon, PRESETS, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);

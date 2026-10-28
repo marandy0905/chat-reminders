@@ -1,18 +1,13 @@
-.gcr-btn, .gcr-menu, .gcr-toast, .gcr-launcher {
+.gcr-menu, .gcr-toast, .gcr-launcher, .gcr-label {
   --gcr-bg: #fff; --gcr-fg: #202124; --gcr-muted: #5f6368; --gcr-border: #dadce0; --gcr-hover: #f1f3f4;
+  --gcr-due: #d93025;
   color-scheme: light;
 }
 .gcr-dark {
   --gcr-bg: #2d2e31; --gcr-fg: #e8eaed; --gcr-muted: #9aa0a6; --gcr-border: #5f6368; --gcr-hover: #3c4043;
+  --gcr-due: #f28b82;
   color-scheme: dark;
 }
-.gcr-btn {
-  position: fixed; z-index: 2147483000; display: none;
-  width: 28px; height: 28px; padding: 0; border: 1px solid var(--gcr-border); border-radius: 50%;
-  background: var(--gcr-bg); color: var(--gcr-fg); box-shadow: 0 1px 3px rgba(0,0,0,.35); cursor: pointer; display: none; align-items: center; justify-content: center;
-}
-.gcr-btn.gcr-show { display: flex; }
-.gcr-btn:hover { background: var(--gcr-hover); }
 .gcr-menu {
   overscroll-behavior: contain;
   position: fixed; z-index: 2147483001; width: 200px; padding: 6px 0;
@@ -33,11 +28,11 @@
 .gcr-launcher {
   position: fixed; z-index: 2147483000; top: 10px; left: 210px; height: 40px; min-width: 40px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 20px;
-  background: #5f6368; color: #fff; box-shadow: none; cursor: pointer; opacity: .45;
-  font: 600 14px/1 Roboto, Arial, sans-serif; transition: opacity .15s, transform .12s, background .15s;
+  background: transparent; color: var(--gcr-muted); box-shadow: none; cursor: pointer;
+  font: 600 14px/1 Roboto, Arial, sans-serif; transition: color .15s, transform .12s, background .15s;
 }
 .gcr-launcher .gcr-icon { display: flex; }
-.gcr-launcher:hover { opacity: .9; }
+.gcr-launcher:hover { background: var(--gcr-hover); color: var(--gcr-fg); }
 .gcr-launcher span:empty { display: none; }
 /* Something is due: solid red, impossible to miss. */
 .gcr-launcher.gcr-due { background: #d93025; color: #fff; opacity: 1; box-shadow: 0 2px 8px rgba(217,48,37,.6); }
@@ -47,3 +42,22 @@
   margin: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer;
 }
 .gcr-inline:hover { background: rgba(128,128,128,.28); }
+/* "Reminder set for ..." above a message that has an active reminder. */
+.gcr-label {
+  display: flex; align-items: center; gap: 4px; margin: 2px 0;
+  color: var(--gcr-muted); font: 12px/16px "Google Sans", Roboto, Arial, sans-serif;
+}
+.gcr-label.gcr-label-due { color: var(--gcr-due); }
+/* Your own messages in the standard layout are right-aligned: follow them. */
+.gcr-label.gcr-label-end { justify-content: flex-end; }
+.gcr-label button {
+  padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-decoration: underline;
+}
+/* Tint the whole message that has an active reminder, like Slack's to-do highlight; red once it's due.
+   The row is Chat's element, so its theme comes from .gcr-reminder-dark rather than .gcr-dark. */
+.gcr-has-reminder {
+  --gcr-highlight: rgba(251, 188, 4, .22); --gcr-highlight-due: rgba(234, 67, 53, .16);
+  background: var(--gcr-highlight); border-radius: 8px;
+}
+.gcr-has-reminder.gcr-reminder-dark { --gcr-highlight: rgba(253, 214, 99, .24); --gcr-highlight-due: rgba(242, 139, 130, .26); }
+.gcr-has-reminder.gcr-reminder-due { background: var(--gcr-highlight-due); }
