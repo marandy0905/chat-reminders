@@ -22,12 +22,14 @@
 - **Chat 內的捷徑：**「New chat」按鈕旁的時鐘按鈕會開啟提醒面板（有逾期項目時顯示紅色與數量，否則為淡色）。快速鍵：**Alt+Shift+R**（可在 `chrome://extensions/shortcuts` 修改）。
 
 ## 更新
-Chrome 無法自動更新這個擴充功能。它約每天檢查一次新版本，若有新版本，會顯示通知、在工具列圖示上顯示 **NEW** 標記，並在彈出視窗顯示提示。更新步驟：
-1. 點選通知或提示，開啟最新版本頁面並下載 **chat-reminders.zip**。
-2. 解壓縮並覆蓋原本的資料夾（取代檔案），或解壓縮到新資料夾後改載入該資料夾。
-3. 開啟 `chrome://extensions`，點選 **Chat Reminders** 的重新載入圖示，然後重新整理 Chat。
+Chrome 無法自動更新這個擴充功能，所以改成一鍵更新。擴充功能約每天檢查一次新版本，若有新版本，會顯示通知、在工具列圖示上顯示 **NEW** 標記，並在彈出視窗與面板顯示提示。
+1. 點選通知或提示，開啟更新頁面。
+2. 只有第一次需要：點選**選擇資料夾**，選取你在 `chrome://extensions` 載入的資料夾（解壓縮後的 Chat Reminders 資料夾）。
+3. 點選**立即更新**。擴充功能會把最新版本下載到該資料夾並自動重新載入，之後請重新整理 Chat。
+
+注意：請選擇 Chat Reminders 資料夾本身，不要選上層資料夾（例如「文件」，Chrome 會封鎖）。之後的瀏覽工作階段中，Chrome 可能會再次要求確認資料夾存取權。若一鍵更新失敗，請到[最新版本](https://github.com/marandy0905/chat-reminders/releases/latest)下載 **chat-reminders.zip**，解壓縮並覆蓋原資料夾，再到 `chrome://extensions` 重新載入。
 
 ## 備註
-- 所有資料都儲存在 `chrome.storage.local`。唯一的網路請求是每日的更新檢查，只會讀取此專案公開的 `manifest.json`，不會傳送任何提醒資料。
+- 所有資料都儲存在 `chrome.storage.local`。唯一的網路請求是每日的更新檢查（讀取此專案公開的 `manifest.json`），以及你按下**立即更新**時從 GitHub 下載的發行檔，不會傳送任何提醒資料。
 - Google Chat 的 DOM 經過混淆。如果時鐘按鈕不再出現，請更新 `content.js` 開頭的 `SELECTORS`。
 - 訊息的深層連結不會出現在 DOM 中，因此「開啟聊天室」會開啟設定提醒當下的聊天室／私訊網址。

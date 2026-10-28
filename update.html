@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Update Chat Reminders</title>
+  <link rel="stylesheet" href="update.css">
+</head>
+<body>
+  <main>
+    <h1>Update Chat Reminders</h1>
+    <p id="versions"></p>
+    <ol>
+      <li id="step1"><b>Allow updating</b> <span>Pick the folder this extension was loaded from. You only need to do this once.</span>
+        <button id="pick" type="button">Choose folder</button></li>
+      <li id="step2"><b>Update</b> <span>Downloads the latest version into that folder and reloads the extension.</span>
+        <button id="go" type="button" class="primary" disabled>Update now</button></li>
+    </ol>
+    <p id="status" role="status"></p>
+    <p class="hint">Prefer to do it by hand? <a id="manual" href="https://github.com/marandy0905/chat-reminders/releases/latest" target="_blank" rel="noopener">Download the zip</a> and unzip it over your folder.</p>
+  </main>
+  <script src="fflate.js"></script>
+  <script src="update.js"></script>
+</body>
+</html>
