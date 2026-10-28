@@ -120,6 +120,15 @@ async function checkUpdate() {
     }
   } catch (_) { /* offline or rate-limited: try again at the next check */ }
 }
+// After an update the stored "update available" flag is stale until the next network check; drop it right away.
+async function clearStaleUpdate() {
+  const { update } = await chrome.storage.local.get("update");
+  if (update && RTime.compareVersions(update.version, chrome.runtime.getManifest().version) <= 0) {
+    await chrome.storage.local.remove("update");
+    chrome.action.setBadgeText({ text: "" });
+  }
+}
+clearStaleUpdate();
 const scheduleUpdateCheck = () => {
   chrome.alarms.create(UPDATE_ALARM, { delayInMinutes: 1, periodInMinutes: 12 * 60 });
 };
@@ -190,7 +199,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     popup: () => openPopup(),
     overview: () => openOverview(),
     openUpdate: () => openUpdate(),
-    updateInfo: async () => (await chrome.storage.local.get("update")).update || null,
+    updateInfo: async () => {
+      const { update } = await chrome.storage.local.get("update");
+      return update && RTime.compareVersions(update.version, chrome.runtime.getManifest().version) > 0 ? update : null;
+    },
     open: async () => { const r = (await load())[msg.id]; if (r) await open(r); },
   }[msg.type];
   if (!run) return false;
