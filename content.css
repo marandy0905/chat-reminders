@@ -56,8 +56,8 @@
   margin: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer;
 }
 .gcr-inline:hover { background: rgba(128,128,128,.28); }
-/* Reminded message: a flat tinted band with a plain "Reminder set for … · View reminders" line on top (like Slack's
-   to-do highlight). Blue while pending, red once due. The row is Chat's element, so its theme comes from
+/* Reminded message: a flat tinted band with a plain "Reminder set for … · View reminders" line on top.
+   Blue while pending, red once due. The row is Chat's element, so its theme comes from
    .gcr-reminder-dark rather than .gcr-dark. */
 .gcr-has-reminder {
   --gcr-tone: #0b57d0; --gcr-tone-soft: rgba(11, 87, 208, .08);

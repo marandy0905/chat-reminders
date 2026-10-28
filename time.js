@@ -69,7 +69,7 @@
   const QUARTER = 15 * MIN;
   const ceilQuarter = (ms) => Math.ceil(ms / QUARTER) * QUARTER;
 
-  // Slack-style picker: a date field plus a dropdown of 15-minute slots.
+  // Picker: a date field plus a dropdown of 15-minute slots.
   // Returns { el, get() -> epoch ms | NaN, set(ms) }.
   function createPicker(initialMs) {
     const el = document.createElement("div");

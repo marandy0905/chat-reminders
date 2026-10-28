@@ -1,6 +1,6 @@
 # Google Chat Reminders
 
-Slack-style reminders for Google Chat (chat.google.com and Gmail's Chat).
+Reminders for Google Chat (chat.google.com and Gmail's Chat).
 
 ## Install (unpacked)
 1. Open `chrome://extensions`, enable **Developer mode**.

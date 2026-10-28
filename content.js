@@ -480,7 +480,7 @@ document.addEventListener("mouseover", onMouseOver, { passive: true });
 document.addEventListener("click", onDocClick);
 document.addEventListener("scroll", onScroll, { capture: true, passive: true });
 
-// "Reminder set for ..." label above each message that has an active reminder, like Slack's "To-do added".
+// "Reminder set for ..." label above each message that has an active reminder.
 // Chat re-renders messages as you scroll, so labels are re-applied on DOM changes, on storage changes, and
 // every minute (to turn "set for" into "due" when the time passes).
 let labels = {};
