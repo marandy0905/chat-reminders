@@ -10,7 +10,7 @@ const SELECTORS = {
 };
 const SNIPPET_LEN = 400;
 
-let btn, menu, activeRow, hideTimer, launcherEl, placeTimer;
+let menu, activeRow, launcherEl, placeTimer;
 
 // After the extension is reloaded/updated, the old content script keeps running in open tabs and every
 // chrome.* call throws "Extension context invalidated". Detect that and tear the old instance down quietly.
@@ -19,8 +19,7 @@ const alive = () => {
 };
 function shutdown() {
   clearInterval(placeTimer);
-  clearTimeout(hideTimer);
-  [btn, menu, launcherEl].forEach((el) => el && el.remove());
+  [menu, launcherEl].forEach((el) => el && el.remove());
   document.querySelectorAll(".gcr-inline").forEach((el) => el.remove());
   document.removeEventListener("mouseover", onMouseOver);
   document.removeEventListener("click", onDocClick);
@@ -176,7 +175,30 @@ async function copyDebug(row) {
       text: (el.innerText || "").replace(/\s+/g, " ").slice(0, 60),
     });
   }
-  const info = { extracted: extract(row), copiedLinks, hoverChain, rowIsToolbar: row.matches(TOOLBAR), permalink: permalink(row), url: location.href };
+  // Every labelled button in the row (hidden ones too: Chat hides the toolbar once the pointer leaves the
+  // message), to see why findToolbarAnchor() missed it.
+  const toolbarButtons = [...row.querySelectorAll("button, [role='button']")]
+    .slice(0, 30)
+    .map((b) => ({
+      label: labelOf(b).slice(0, 60),
+      matchesLabels: TOOLBAR_LABELS.test(labelOf(b)),
+      visible: !!b.offsetParent,
+      inToolbar: !!b.closest(TOOLBAR),
+    }));
+  // Every "More actions" slot on the page and how far it is from the row (findNearbyToolbarAnchor() needs it
+  // visible and within NEARBY_TOOLBAR_PX).
+  const rr = row.getBoundingClientRect();
+  const moreSlots = [...document.querySelectorAll("[data-more-actions-menu-button-id]")].slice(0, 20).map((m) => {
+    const more = m.nextElementSibling;
+    const b = more && more.getBoundingClientRect();
+    return {
+      hasNext: !!more,
+      visible: !!(more && more.offsetParent),
+      inRow: row.contains(m),
+      dist: b ? Math.round(b.bottom < rr.top ? rr.top - b.bottom : b.top > rr.bottom ? b.top - rr.bottom : 0) : null,
+    };
+  });
+  const info = { extracted: extract(row), copiedLinks, hoverChain, toolbarButtons, moreSlots, anchorFound: !!findToolbarAnchor(row), rowIsToolbar: row.matches(TOOLBAR), permalink: permalink(row), url: location.href };
   try {
     await navigator.clipboard.writeText(JSON.stringify(info, null, 2));
     toast("Debug info copied to clipboard");
@@ -252,7 +274,7 @@ function openMenu(row, anchor) {
   });
   menu.append(picker.el, go);
 
-  const r = (anchor || btn).getBoundingClientRect();
+  const r = anchor.getBoundingClientRect();
   const M = 8; // margin kept to the viewport edges
   menu.style.visibility = "hidden";
   document.body.appendChild(menu);
@@ -272,36 +294,6 @@ function openMenu(row, anchor) {
   menu.style.top = `${Math.max(M, top)}px`;
   menu.style.left = `${Math.max(M, Math.min(r.right - 200, window.innerWidth - 200 - 2 * M))}px`;
   menu.style.visibility = "";
-}
-
-function ensureButton() {
-  if (btn) return;
-  btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "gcr-btn";
-  themed(btn);
-  btn.title = "Remind me about this message";
-  btn.appendChild(RTime.icon("clock", 18));
-  btn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (e.shiftKey && activeRow) copyDebug(activeRow);
-    else if (menu) closeMenu();
-    else if (activeRow) openMenu(activeRow, btn);
-  });
-  btn.addEventListener("mouseenter", () => clearTimeout(hideTimer));
-  btn.addEventListener("mouseleave", scheduleHide);
-  document.body.appendChild(btn);
-}
-
-function scheduleHide() {
-  if (!alive()) return shutdown();
-  clearTimeout(hideTimer);
-  hideTimer = setTimeout(() => {
-    if (!alive()) return shutdown();
-    if (menu) return;
-    btn && btn.classList.remove("gcr-show");
-  }, 400);
 }
 
 // Chat's own hover toolbar (reactions, reply, more...). We put our clock button inside it, next to its
@@ -332,7 +324,25 @@ function findToolbarAnchor(row) {
     }
     return child;
   }
-  return null;
+  return findNearbyToolbarAnchor(row);
+}
+
+// In compact mode the hover toolbar isn't inside the message's subtree. Fall back to the visible toolbar that
+// sits on (or just above/below) the hovered message. `data-more-actions-menu-button-id` marks the slot right
+// before the toolbar's "More actions" button and isn't obfuscated.
+const NEARBY_TOOLBAR_PX = 48;
+function findNearbyToolbarAnchor(row) {
+  const r = row.getBoundingClientRect();
+  let best = null;
+  let bestDist = Infinity;
+  for (const marker of document.querySelectorAll("[data-more-actions-menu-button-id]")) {
+    const more = marker.nextElementSibling;
+    if (!more || !more.offsetParent) continue;
+    const b = more.getBoundingClientRect();
+    const dist = b.bottom < r.top ? r.top - b.bottom : b.top > r.bottom ? b.top - r.bottom : 0;
+    if (dist < bestDist) { best = more; bestDist = dist; }
+  }
+  return bestDist <= NEARBY_TOOLBAR_PX ? best : null;
 }
 
 // The toolbar sits inside the message bubble, so `color: inherit` picks up the bubble's text color (white on
@@ -377,32 +387,17 @@ function injectInline(row) {
   return true;
 }
 
+// The clock only ever lives in Chat's own hover toolbar: if the toolbar can't be found, no clock is shown.
 function showFor(row) {
-  clearTimeout(hideTimer);
   activeRow = row;
   // The toolbar may render a moment after the hover starts, so retry briefly.
-  const tryInline = () => activeRow === row && injectInline(row);
-  if (tryInline()) {
-    btn && btn.classList.remove("gcr-show");
-    return;
-  }
+  const tryInline = () => alive() && activeRow === row && injectInline(row);
+  if (tryInline()) return;
   const now = Date.now();
   if (now - (row._gcrRetry || 0) > 1500) {
     row._gcrRetry = now;
-    [80, 250, 600].forEach((ms) =>
-    setTimeout(() => {
-      if (alive() && tryInline()) btn && btn.classList.remove("gcr-show");
-    }, ms)
-    );
+    [80, 250, 600, 1200].forEach((ms) => setTimeout(tryInline, ms));
   }
-
-  // Fallback while (or if) the toolbar can't be found: a floating button at the row's right edge.
-  ensureButton();
-  themed(btn);
-  const r = row.getBoundingClientRect();
-  btn.style.top = `${Math.max(0, r.top + 4)}px`;
-  btn.style.left = `${Math.max(0, Math.min(r.right - 140, window.innerWidth - 36))}px`;
-  btn.classList.add("gcr-show");
 }
 
 let lastTarget = null;
@@ -419,16 +414,12 @@ function rowOf(target) {
 
 function onMouseOver(e) {
   if (!alive()) return shutdown();
-  if (!(e.target instanceof Element) || e.target.closest(".gcr-btn, .gcr-menu")) return;
+  if (!(e.target instanceof Element) || e.target.closest(".gcr-menu")) return;
   // Moving from the message onto its toolbar: keep the message we were on.
-  if (e.target.closest(TOOLBAR + ", .gcr-inline")) {
-    clearTimeout(hideTimer);
-    return;
-  }
+  if (e.target.closest(TOOLBAR + ", .gcr-inline")) return;
   lastTarget = e.target;
   const row = rowOf(e.target);
   if (row && !row.closest(SELECTORS.excluded)) showFor(row);
-  else scheduleHide();
 }
 function onDocClick(e) {
   if (menu && !(e.target instanceof Element && e.target.closest(".gcr-menu"))) closeMenu();
@@ -436,7 +427,6 @@ function onDocClick(e) {
 function onScroll(e) {
   if (menu && e && e.target instanceof Node && menu.contains(e.target)) return; // scrolling the menu itself
   closeMenu();
-  btn && btn.classList.remove("gcr-show");
 }
 document.addEventListener("mouseover", onMouseOver, { passive: true });
 document.addEventListener("click", onDocClick);

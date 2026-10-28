@@ -1,4 +1,4 @@
-.gcr-btn, .gcr-menu, .gcr-toast, .gcr-launcher {
+.gcr-menu, .gcr-toast, .gcr-launcher {
   --gcr-bg: #fff; --gcr-fg: #202124; --gcr-muted: #5f6368; --gcr-border: #dadce0; --gcr-hover: #f1f3f4;
   color-scheme: light;
 }
@@ -6,13 +6,6 @@
   --gcr-bg: #2d2e31; --gcr-fg: #e8eaed; --gcr-muted: #9aa0a6; --gcr-border: #5f6368; --gcr-hover: #3c4043;
   color-scheme: dark;
 }
-.gcr-btn {
-  position: fixed; z-index: 2147483000; display: none;
-  width: 28px; height: 28px; padding: 0; border: 1px solid var(--gcr-border); border-radius: 50%;
-  background: var(--gcr-bg); color: var(--gcr-fg); box-shadow: 0 1px 3px rgba(0,0,0,.35); cursor: pointer; display: none; align-items: center; justify-content: center;
-}
-.gcr-btn.gcr-show { display: flex; }
-.gcr-btn:hover { background: var(--gcr-hover); }
 .gcr-menu {
   overscroll-behavior: contain;
   position: fixed; z-index: 2147483001; width: 200px; padding: 6px 0;
