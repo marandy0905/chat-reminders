@@ -1,5 +1,7 @@
 # Google Chat Reminders
 
+**English** | [繁體中文](README.zh-TW.md)
+
 Reminders for Google Chat (chat.google.com and Gmail's Chat).
 
 ## Install (no coding needed)
