@@ -1,19 +1,24 @@
 name: Bump version
 
-# Every push to main (i.e. every merge) bumps the patch version in manifest.json, so unpacked installs
+# Every merge to main that changes extension code (not docs, tests or workflows) bumps the patch version in manifest.json, so unpacked installs
 # (git clone + chrome://extensions) see a newer version and notify their users.
 on:
   push:
     branches: [main]
-    paths-ignore: [manifest.json]
+    paths:
+      - '*.js'
+      - '*.css'
+      - '*.html'
+      - 'icons/**'
+      - manifest.json
 
 permissions:
   contents: write
 
 jobs:
   bump:
-    # The bump commit touches only manifest.json (ignored above) and is pushed with GITHUB_TOKEN,
-    # which doesn't trigger workflows, so this can't loop.
+    # The bump commit is pushed with GITHUB_TOKEN, which doesn't trigger workflows, and the actor check
+    # below is a second guard, so this can't loop.
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:

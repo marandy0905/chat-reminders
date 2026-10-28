@@ -17,7 +17,7 @@ Reminders for Google Chat (chat.google.com and Gmail's Chat).
 - **Shortcut in Chat:** the clock button next to the Chat logo (red with a count when something is due, faded otherwise) opens the popup. Keyboard: **Alt+Shift+R** (change at `chrome://extensions/shortcuts`).
 
 ## Updating
-An unpacked install never updates itself. The extension checks this repo's `main` branch once a day and, when its `manifest.json` version is newer than yours, shows a notification, a **NEW** badge on the toolbar icon and a banner in the popup. To update: `git pull` in your clone, then click reload on the extension at `chrome://extensions` and refresh Chat. The version is bumped automatically (patch) by a GitHub Action on every merge to `main`.
+An unpacked install never updates itself. The extension checks this repo's `main` branch once a day and, when its `manifest.json` version is newer than yours, shows a notification, a **NEW** badge on the toolbar icon and a banner in the popup. To update: `git pull` in your clone, then click reload on the extension at `chrome://extensions` and refresh Chat. The version is bumped automatically (patch) by a GitHub Action whenever a merge to `main` changes extension code (docs-only changes don't count).
 
 ## Notes
 - All data stays in `chrome.storage.local`. The only network request is the daily update check, which fetches this repo's public `manifest.json`; no reminder data is sent.
