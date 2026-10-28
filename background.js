@@ -89,7 +89,7 @@ chrome.alarms.onAlarm.addListener(async ({ name }) => {
 });
 
 // Update check for unpacked (git clone) installs, which Chrome never updates by itself: once a day, compare our
-// manifest version with the one on the repo's main branch and tell the user to `git pull` + reload.
+// manifest version with the one on the repo's main branch and tell the user to download the new release zip.
 const REPO_URL = "https://github.com/marandy0905/chat-reminders";
 const REMOTE_MANIFEST = "https://raw.githubusercontent.com/marandy0905/chat-reminders/main/manifest.json";
 const UPDATE_ALARM = "gcr-update-check";
@@ -115,7 +115,7 @@ async function checkUpdate() {
         type: "basic",
         iconUrl: "icons/icon128.png",
         title: "Chat Reminders update available",
-        message: `Version ${latest} is out (you have ${current}). Run git pull in your clone, then reload the extension at chrome://extensions.`,
+        message: `Version ${latest} is out (you have ${current}). Click to download it, unzip it over your current folder, then reload the extension at chrome://extensions.`,
       });
     }
   } catch (_) { /* offline or rate-limited: try again at the next check */ }
@@ -151,7 +151,7 @@ chrome.notifications.onButtonClicked.addListener(async (id, idx) => {
 
 chrome.notifications.onClicked.addListener(async (id) => {
   if (id === UPDATE_NOTE) {
-    await chrome.tabs.create({ url: `${REPO_URL}#updating` });
+    await chrome.tabs.create({ url: `${REPO_URL}/releases/latest` });
     return chrome.notifications.clear(id);
   }
   const r = (await load())[id];

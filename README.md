@@ -2,10 +2,15 @@
 
 Reminders for Google Chat (chat.google.com and Gmail's Chat).
 
-## Install (unpacked)
-1. Open `chrome://extensions`, enable **Developer mode**.
-2. **Load unpacked** → select this folder.
-3. Allow notifications for Chrome in your OS settings.
+## Install (no coding needed)
+1. Go to the [latest release](https://github.com/marandy0905/chat-reminders/releases/latest) and download **chat-reminders.zip**.
+2. Unzip it and put the folder somewhere permanent (for example Documents). Chrome reads the extension from there, so don't delete or move it later.
+3. In Chrome, open `chrome://extensions` (paste it into the address bar).
+4. Turn on **Developer mode** (switch at the top right).
+5. Click **Load unpacked** and choose the unzipped folder.
+6. Refresh Google Chat. Allow Chrome notifications in your computer's settings if asked.
+
+Tip: click the puzzle-piece icon in Chrome's toolbar and pin **Chat Reminders** so the icon is always visible.
 
 ## Use
 - **On a message:** hover it, click the clock button, pick a time. The notification shows the message text; "Open chat" takes you back.
@@ -17,7 +22,12 @@ Reminders for Google Chat (chat.google.com and Gmail's Chat).
 - **Shortcut in Chat:** the clock button next to the Chat logo (red with a count when something is due, faded otherwise) opens the popup. Keyboard: **Alt+Shift+R** (change at `chrome://extensions/shortcuts`).
 
 ## Updating
-An unpacked install never updates itself. The extension checks this repo's `main` branch once a day and, when its `manifest.json` version is newer than yours, shows a notification, a **NEW** badge on the toolbar icon and a banner in the popup. To update: `git pull` in your clone, then click reload on the extension at `chrome://extensions` and refresh Chat. The version is bumped automatically (patch) by a GitHub Action whenever a merge to `main` changes extension code (docs-only changes don't count).
+Chrome can't update this extension by itself. About once a day it checks for a newer version and, if there is one, shows a notification, a **NEW** badge on the toolbar icon and a banner in the popup. To update:
+1. Click the notification or banner to open the latest release and download **chat-reminders.zip**.
+2. Unzip it over your existing folder (replace the files), or into a new folder and load that one instead.
+3. Open `chrome://extensions`, click the reload arrow on **Chat Reminders**, then refresh Chat.
+
+Maintainers: when a merge to `main` changes extension code, a GitHub Action bumps the patch version in `manifest.json` and publishes a release with the zip attached (docs-only changes don't count).
 
 ## Notes
 - All data stays in `chrome.storage.local`. The only network request is the daily update check, which fetches this repo's public `manifest.json`; no reminder data is sent.
