@@ -1,0 +1,25 @@
+:root { --bg: #fff; --fg: #202124; --muted: #5f6368; --border: #e0e0e0; --hover: #f1f3f4; --accent: #1a73e8; --danger: #d93025; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #202124; --fg: #e8eaed; --muted: #9aa0a6; --border: #3c4043; --hover: #303134; --accent: #8ab4f8; --danger: #f28b82; }
+}
+body { width: 720px; min-height: 360px; margin: 0; padding: 16px 18px; background: var(--bg); color: var(--fg); font: 14px/1.5 "Google Sans", Roboto, Arial, sans-serif; }
+h2 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+h2 a { float: right; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--accent); text-decoration: none; }
+ul { margin: 0; padding: 0; list-style: none; max-height: 500px; overflow-y: auto; }
+li { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 12px 36px 12px 4px; border-bottom: 1px solid var(--border); }
+.t { flex: 1; min-width: 0; }
+.t b { display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; font-weight: 500; white-space: pre-wrap; overflow-wrap: anywhere; }
+.t span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+.t span.due { color: var(--danger); }
+.actions { display: flex; flex-direction: column; gap: 6px; }
+button { padding: 5px 12px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--fg); font: inherit; font-size: 13px; cursor: pointer; }
+button:hover { background: var(--hover); }
+button.danger:hover { color: var(--danger); }
+#empty { color: var(--muted); display: none; }
+.from { margin-bottom: 2px; font-size: 12px; font-weight: 600; color: var(--accent); }
+li { cursor: pointer; }
+li:hover { background: var(--hover); }
+.check { flex: none; width: 15px; height: 15px; margin: 4px 0 0; accent-color: var(--accent); cursor: pointer; }
+button.del { position: absolute; top: 6px; right: 4px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; font-size: 18px; line-height: 22px; color: var(--muted); }
+button.del:hover { background: var(--hover); color: var(--danger); }
+button.del { display: flex; align-items: center; justify-content: center; }

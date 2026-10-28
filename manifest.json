@@ -1,0 +1,66 @@
+{
+  "manifest_version": 3,
+  "name": "Google Chat Reminders",
+  "version": "1.0.0",
+  "description": "Slack-style reminders for Google Chat: remind yourself about a message, get a desktop notification.",
+  "permissions": [
+    "alarms",
+    "notifications",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://chat.google.com/*",
+    "https://mail.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chat.google.com/*",
+        "https://mail.google.com/chat/*",
+        "https://mail.google.com/mail/*"
+      ],
+      "js": [
+        "hook.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://chat.google.com/*",
+        "https://mail.google.com/chat/*",
+        "https://mail.google.com/mail/*"
+      ],
+      "js": [
+        "time.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "commands": {
+    "open-overview": {
+      "suggested_key": {
+        "default": "Alt+Shift+R"
+      },
+      "description": "Open the reminders overview"
+    }
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Reminders"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

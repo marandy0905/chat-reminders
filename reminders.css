@@ -1,0 +1,31 @@
+:root { --bg: #fff; --fg: #202124; --muted: #5f6368; --border: #e0e0e0; --hover: #f1f3f4; --accent: #1a73e8; --danger: #d93025; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #202124; --fg: #e8eaed; --muted: #9aa0a6; --border: #3c4043; --hover: #303134; --accent: #8ab4f8; --danger: #f28b82; }
+}
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 "Google Sans", Roboto, Arial, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+h1 { font-size: 22px; font-weight: 500; }
+h2 { margin: 28px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+h2.overdue { color: var(--danger); }
+ul { margin: 0; padding: 0; list-style: none; }
+li { position: relative; display: flex; align-items: flex-start; gap: 8px; padding: 10px 6px; border-bottom: 1px solid var(--border); }
+li.done .t b { text-decoration: line-through; color: var(--muted); }
+.t { flex: 1; min-width: 0; }
+.t b { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-weight: 500; white-space: pre-wrap; overflow-wrap: anywhere; }
+.t span { color: var(--muted); font-size: 12px; }
+button { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--fg); font: inherit; cursor: pointer; }
+button:hover { background: var(--hover); }
+button.danger:hover { color: var(--danger); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.menu { position: absolute; right: 6px; top: calc(100% - 4px); z-index: 10; width: 220px; padding: 6px 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
+.menu > button { display: block; width: 100%; border: 0; border-radius: 0; text-align: left; padding: 7px 14px; }
+.menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+.menu .rt-picker { display: flex; flex-direction: column; gap: 6px; margin: 6px 14px; }
+.menu input, .menu select { padding: 5px 6px; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; }
+.menu .go { margin: 0 14px 6px; width: calc(100% - 28px); }
+#empty { color: var(--muted); display: none; }
+.from { margin-bottom: 2px; font-size: 12px; font-weight: 600; color: var(--accent); }
+li { cursor: pointer; }
+li:hover { background: var(--hover); }
+.lbl { display: inline-flex; align-items: center; gap: 4px; }
+button.icon { display: inline-flex; align-items: center; padding: 5px 7px; }
