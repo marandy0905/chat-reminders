@@ -10,7 +10,7 @@ const SELECTORS = {
 };
 const SNIPPET_LEN = 400;
 
-let menu, activeRow, launcherEl, placeTimer;
+let menu, activeRow, launcherEl, placeTimer, labelObserver, labelTick;
 
 // After the extension is reloaded/updated, the old content script keeps running in open tabs and every
 // chrome.* call throws "Extension context invalidated". Detect that and tear the old instance down quietly.
@@ -20,7 +20,10 @@ const alive = () => {
 function shutdown() {
   clearInterval(placeTimer);
   [menu, launcherEl].forEach((el) => el && el.remove());
-  document.querySelectorAll(".gcr-inline").forEach((el) => el.remove());
+  document.querySelectorAll(".gcr-inline, .gcr-label").forEach((el) => el.remove());
+  document.querySelectorAll(".gcr-has-reminder").forEach((el) => el.classList.remove("gcr-has-reminder", "gcr-reminder-due", "gcr-reminder-dark"));
+  labelObserver && labelObserver.disconnect();
+  clearInterval(labelTick);
   document.removeEventListener("mouseover", onMouseOver);
   document.removeEventListener("click", onDocClick);
   document.removeEventListener("scroll", onScroll, true);
@@ -42,11 +45,12 @@ function themed(el) {
 
 // Chat's own hover toolbar / menus / tooltips and visually-hidden metadata live inside the message row.
 // Their labels must not end up in the reminder text. Selectors are best effort (Chat's markup is obfuscated).
-const UI_NODES = "button, [role='button'], [role='toolbar'], [role='menu'], [role='menuitem'], [role='tooltip'], [aria-hidden='true'], [data-tooltip], [data-emoji-picker-button-id], [data-menu-action], style, script";
+const UI_NODES = "button, [role='button'], [role='toolbar'], [role='menu'], [role='menuitem'], [role='tooltip'], [aria-hidden='true'], [data-tooltip], [data-emoji-picker-button-id], [data-menu-action], .gcr-label, style, script";
 const SENDER_SEL = "[data-name], [data-member-id]";
 
 // Metadata phrases Chat injects as hidden text (English + Traditional Chinese).
 const NOISE = [
+  /Reminder (?:set for|due) [^·]*· View reminders/g,
   /Open in chat/gi, /Open in space/gi, /Copy link/gi, /Reply in thread/gi, /Add reaction/gi, /More actions/gi,
   /\bis the owner\b/gi, /\bis a manager\b/gi, /\bExternal\b(?=\s|,|$)/g,
   /Edited on [A-Za-z]{3,9}\.? \d{1,2}, \d{4}/gi, /\bEdited\b/gi,
@@ -431,6 +435,104 @@ function onScroll(e) {
 document.addEventListener("mouseover", onMouseOver, { passive: true });
 document.addEventListener("click", onDocClick);
 document.addEventListener("scroll", onScroll, { capture: true, passive: true });
+
+// "Reminder set for ..." label above each message that has an active reminder, like Slack's "To-do added".
+// Chat re-renders messages as you scroll, so labels are re-applied on DOM changes, on storage changes, and
+// every minute (to turn "set for" into "due" when the time passes).
+let labels = {};
+let labelPending = false;
+
+function makeLabel() {
+  const el = document.createElement("div");
+  el.className = "gcr-label";
+  const text = document.createElement("span");
+  const view = document.createElement("button");
+  view.type = "button";
+  view.textContent = "View reminders";
+  view.addEventListener("click", (e) => {
+    e.stopPropagation();
+    alive() ? chrome.runtime.sendMessage({ type: "popup" }) : shutdown();
+  });
+  el.append(RTime.icon("clock", 14), text, document.createTextNode("·"), view);
+  return el;
+}
+
+// In the standard (bubble) layout your own messages sit on the right. Chat's markup doesn't say so, so compare
+// where the message's text actually is with the row's edges. Chat's hover toolbar and its tooltips are text in
+// the row too, so they're skipped, and the answer is kept per row (until its width changes) so the label never
+// jumps while hovering.
+function isRightAligned(row) {
+  const r = row.getBoundingClientRect();
+  if (row._gcrEnd && row._gcrEnd.width === r.width) return row._gcrEnd.end;
+  let left = Infinity;
+  let right = -Infinity;
+  const w = document.createTreeWalker(row, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) =>
+      n.nodeValue.trim() && !n.parentElement.closest(`.gcr-label, ${UI_NODES}`) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT,
+  });
+  const range = document.createRange();
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    range.selectNodeContents(n);
+    const b = range.getBoundingClientRect();
+    if (!b.width) continue;
+    left = Math.min(left, b.left);
+    right = Math.max(right, b.right);
+  }
+  if (!(right > left)) return false;
+  const end = r.right - right < left - r.left;
+  row._gcrEnd = { width: r.width, end };
+  return end;
+}
+
+function renderLabels() {
+  labelPending = false;
+  if (!alive()) return shutdown();
+  document.querySelectorAll(".gcr-label").forEach((el) => {
+    if (!labels[el.parentElement && el.parentElement.getAttribute("data-id")]) el.remove();
+  });
+  document.querySelectorAll(".gcr-has-reminder").forEach((row) => {
+    if (!labels[row.getAttribute("data-id")]) row.classList.remove("gcr-has-reminder", "gcr-reminder-due", "gcr-reminder-dark");
+  });
+  const dark = isDarkPage();
+  for (const [id, l] of Object.entries(labels)) {
+    for (const row of document.querySelectorAll(`${SELECTORS.messageRow}[data-id="${id}"]`)) {
+      let el = row.firstElementChild;
+      if (!el || !el.classList.contains("gcr-label")) row.prepend((el = makeLabel()));
+      // Only touch the DOM when something changed: our own writes would otherwise re-trigger the observer forever.
+      const span = el.querySelector("span");
+      if (span.textContent !== l.text) span.textContent = l.text;
+      if (el.classList.contains("gcr-label-due") !== l.overdue) el.classList.toggle("gcr-label-due", l.overdue);
+      const end = isRightAligned(row);
+      if (el.classList.contains("gcr-label-end") !== end) el.classList.toggle("gcr-label-end", end);
+      if (!row.classList.contains("gcr-has-reminder")) row.classList.add("gcr-has-reminder");
+      if (row.classList.contains("gcr-reminder-due") !== l.overdue) row.classList.toggle("gcr-reminder-due", l.overdue);
+      // The row is Chat's own element, so it gets its own theme class rather than .gcr-dark (which also sets
+      // color-scheme).
+      if (row.classList.contains("gcr-reminder-dark") !== dark) row.classList.toggle("gcr-reminder-dark", dark);
+      if (el.classList.contains("gcr-dark") !== dark) themed(el);
+    }
+  }
+}
+
+function scheduleLabels() {
+  if (labelPending) return;
+  labelPending = true;
+  setTimeout(renderLabels, 250);
+}
+
+function loadLabels() {
+  if (!alive()) return shutdown();
+  chrome.storage.local.get("reminders").then((o) => {
+    labels = RTime.reminderLabels(o.reminders, Date.now());
+    scheduleLabels();
+  }).catch(() => {});
+}
+
+loadLabels();
+chrome.storage.onChanged.addListener((_c, area) => area === "local" && loadLabels());
+labelTick = setInterval(loadLabels, 60 * 1000);
+labelObserver = new MutationObserver(() => Object.keys(labels).length && scheduleLabels());
+labelObserver.observe(document.body, { childList: true, subtree: true });
 
 // Launcher: small button (top frame only) that opens the reminders overview, with a count of active reminders.
 if (window.top === window) {
