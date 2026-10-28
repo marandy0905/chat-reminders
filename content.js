@@ -335,6 +335,13 @@ function findToolbarAnchor(row) {
   return null;
 }
 
+// The toolbar sits inside the message bubble, so `color: inherit` picks up the bubble's text color (white on
+// your own messages in light + compact mode). Copy the color Chat paints its own toolbar icons with instead.
+function toolbarIconColor(anchor) {
+  const svg = anchor.querySelector("svg");
+  return svg ? getComputedStyle(svg).fill : getComputedStyle(anchor).color;
+}
+
 function injectInline(row) {
   const anchor = findToolbarAnchor(row);
   if (!anchor || !anchor.parentElement) return false;
@@ -347,11 +354,13 @@ function injectInline(row) {
   if (existing.length) {
     // Keep the click handler bound to the row currently being hovered.
     existing[0]._gcrRow = row;
+    existing[0].style.color = toolbarIconColor(anchor);
     return true;
   }
   const b = document.createElement("button");
   b.type = "button";
   b.className = "gcr-inline";
+  b.style.color = toolbarIconColor(anchor);
   b.title = "Remind me about this message";
   b.appendChild(RTime.icon("clock", 20));
   b.addEventListener("click", (e) => {

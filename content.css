@@ -33,11 +33,11 @@
 .gcr-launcher {
   position: fixed; z-index: 2147483000; top: 10px; left: 210px; height: 40px; min-width: 40px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 20px;
-  background: #5f6368; color: #fff; box-shadow: none; cursor: pointer; opacity: .45;
-  font: 600 14px/1 Roboto, Arial, sans-serif; transition: opacity .15s, transform .12s, background .15s;
+  background: transparent; color: var(--gcr-muted); box-shadow: none; cursor: pointer;
+  font: 600 14px/1 Roboto, Arial, sans-serif; transition: color .15s, transform .12s, background .15s;
 }
 .gcr-launcher .gcr-icon { display: flex; }
-.gcr-launcher:hover { opacity: .9; }
+.gcr-launcher:hover { background: var(--gcr-hover); color: var(--gcr-fg); }
 .gcr-launcher span:empty { display: none; }
 /* Something is due: solid red, impossible to miss. */
 .gcr-launcher.gcr-due { background: #d93025; color: #fff; opacity: 1; box-shadow: 0 2px 8px rgba(217,48,37,.6); }
