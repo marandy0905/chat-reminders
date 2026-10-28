@@ -277,10 +277,17 @@ function openMenu(row, anchor) {
   head.textContent = "Remind me about this";
   menu.appendChild(head);
 
-  const item = (label, fn) => {
+  const item = (label, fn, hint) => {
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = label;
+    b.className = "gcr-menu-item";
+    b.append(label);
+    if (hint) {
+      const h = document.createElement("span");
+      h.className = "gcr-menu-hint";
+      h.textContent = hint;
+      b.appendChild(h);
+    }
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       closeMenu();
@@ -288,12 +295,22 @@ function openMenu(row, anchor) {
     });
     menu.appendChild(b);
   };
-  RTime.PRESETS.forEach((p) => item(p.label, () => remindAt(row, p.at(Date.now()))));
+  RTime.PRESETS.forEach((p) => {
+    const at = p.at(Date.now());
+    item(p.label, () => remindAt(row, at), /\d:\d/.test(p.label) ? "" : RTime.formatTime(at));
+  });
+  const sep = document.createElement("div");
+  sep.className = "gcr-menu-sep";
+  const customHead = document.createElement("div");
+  customHead.className = "gcr-menu-sub";
+  customHead.textContent = "Custom time";
+  menu.append(sep, customHead);
 
   const picker = RTime.createPicker(Date.now() + 3600e3);
   const go = document.createElement("button");
   go.type = "button";
-  go.textContent = "Set custom time";
+  go.className = "gcr-menu-primary";
+  go.textContent = "Set reminder";
   go.addEventListener("click", (e) => {
     e.stopPropagation();
     const when = picker.get();
@@ -321,8 +338,10 @@ function openMenu(row, anchor) {
   menu.style.maxHeight = `${Math.max(120, maxH)}px`;
   menu.style.overflowY = "auto";
   menu.style.top = `${Math.max(M, top)}px`;
-  menu.style.left = `${Math.max(M, Math.min(r.right - 200, window.innerWidth - 200 - 2 * M))}px`;
+  menu.style.left = `${Math.max(M, Math.min(r.right - 264, window.innerWidth - 264 - 2 * M))}px`;
+  menu.style.transformOrigin = `${Math.max(0, Math.round(r.left + r.width / 2 - parseFloat(menu.style.left)))}px ${top >= r.bottom ? "top" : "bottom"}`;
   menu.style.visibility = "";
+  requestAnimationFrame(() => menu && menu.classList.add("gcr-open"));
 }
 
 // Chat's own hover toolbar (reactions, reply, more...). We put our clock button inside it, next to its
