@@ -5,9 +5,19 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h2>Upcoming reminders <a id="all" href="#">View all &amp; completed</a></h2>
+  <header>
+    <div>
+      <h1>Reminders</h1>
+      <p id="sub"></p>
+    </div>
+    <a id="all" href="#">View all</a>
+  </header>
   <ul id="list"></ul>
-  <p id="empty">No reminders. Hover a message in Google Chat and click the clock button to add one.</p>
+  <div id="empty">
+    <span id="emptyIcon"></span>
+    <p><b>All caught up</b></p>
+    <p>Hover a message in Google Chat and click the clock to add a reminder.</p>
+  </div>
   <script src="time.js"></script>
   <script src="popup.js"></script>
 </body>
