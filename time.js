@@ -51,14 +51,17 @@
   // Labels for messages with an active reminder: { messageId: { text, overdue } }, nearest reminder per message.
   function reminderLabels(reminders, now, fmt = formatWhen) {
     const nearest = {};
-    for (const r of Object.values(reminders || {})) {
+    const ids = {};
+    for (const [key, r] of Object.entries(reminders || {})) {
       const id = !r.done && messageIdOf(r.url);
-      if (id && (!nearest[id] || r.when < nearest[id].when)) nearest[id] = r;
+      if (!id) continue;
+      (ids[id] = ids[id] || []).push(r.id || key);
+      if (!nearest[id] || r.when < nearest[id].when) nearest[id] = r;
     }
     const out = {};
     for (const [id, r] of Object.entries(nearest)) {
       const overdue = r.when <= now;
-      out[id] = { text: `${overdue ? "Reminder due" : "Reminder set for"} ${fmt(r.when)}`, overdue };
+      out[id] = { text: `${overdue ? "Reminder due" : "Reminder set for"} ${fmt(r.when)}`, overdue, ids: ids[id] };
     }
     return out;
   }
@@ -66,7 +69,7 @@
   const QUARTER = 15 * MIN;
   const ceilQuarter = (ms) => Math.ceil(ms / QUARTER) * QUARTER;
 
-  // Slack-style picker: a date field plus a dropdown of 15-minute slots.
+  // Picker: a date field plus a dropdown of 15-minute slots.
   // Returns { el, get() -> epoch ms | NaN, set(ms) }.
   function createPicker(initialMs) {
     const el = document.createElement("div");

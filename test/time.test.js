@@ -37,8 +37,8 @@ const labels = T.reminderLabels(
   fmt
 );
 assert.deepStrictEqual(labels, {
-  msgAAAAAAAA: { text: `Reminder set for @${now + 30e3}`, overdue: false },
-  msgBBBBBBBB: { text: `Reminder due @${now - 60e3}`, overdue: true },
+  msgAAAAAAAA: { text: `Reminder set for @${now + 30e3}`, overdue: false, ids: ["a", "b"] },
+  msgBBBBBBBB: { text: `Reminder due @${now - 60e3}`, overdue: true, ids: ["c"] },
 });
 assert.deepStrictEqual(T.reminderLabels({}, now, fmt), {});
 console.log("ok");

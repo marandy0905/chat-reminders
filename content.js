@@ -10,7 +10,7 @@ const SELECTORS = {
 };
 const SNIPPET_LEN = 400;
 
-let menu, activeRow, launcherEl, placeTimer, labelObserver, labelTick;
+let menu, activeRow, launcherEl, panelEl, placeTimer, labelObserver, labelTick;
 
 // After the extension is reloaded/updated, the old content script keeps running in open tabs and every
 // chrome.* call throws "Extension context invalidated". Detect that and tear the old instance down quietly.
@@ -19,7 +19,7 @@ const alive = () => {
 };
 function shutdown() {
   clearInterval(placeTimer);
-  [menu, launcherEl].forEach((el) => el && el.remove());
+  [menu, launcherEl, panelEl].forEach((el) => el && el.remove());
   document.querySelectorAll(".gcr-inline, .gcr-label").forEach((el) => el.remove());
   document.querySelectorAll(".gcr-has-reminder").forEach((el) => el.classList.remove("gcr-has-reminder", "gcr-reminder-due", "gcr-reminder-dark"));
   labelObserver && labelObserver.disconnect();
@@ -40,6 +40,31 @@ function isDarkPage() {
 
 function themed(el) {
   el.classList.toggle("gcr-dark", isDarkPage());
+  return el;
+}
+
+// Make a floating surface follow the user's Chat theme (not just light/dark): take the surface and text colours
+// from the page (sidebar area; body inside iframes) and New chat's fill for hover, via the --gcr-* variables.
+function chatTheme(el) {
+  const solid = (n) => {
+    for (; n; n = n.parentElement) {
+      const c = getComputedStyle(n).backgroundColor;
+      if (!/^rgba\(.*,\s*0\)$|^transparent$/.test(c)) return c;
+    }
+    return "";
+  };
+  themed(el);
+  const under = (window.top === window && document.elementFromPoint(24, Math.min(300, innerHeight - 2))) || document.body;
+  const bg = solid(under) || solid(document.body);
+  const fg = getComputedStyle(under).color;
+  const fill = launcherEl && launcherEl.style.getPropertyValue("--gcr-pill-bg");
+  if (bg) el.style.setProperty("--gcr-bg", bg);
+  if (fg) {
+    el.style.setProperty("--gcr-fg", fg);
+    el.style.setProperty("--gcr-muted", `color-mix(in srgb, ${fg} 62%, transparent)`);
+    el.style.setProperty("--gcr-border", `color-mix(in srgb, ${fg} 16%, transparent)`);
+    el.style.setProperty("--gcr-hover", fill || `color-mix(in srgb, ${fg} 10%, transparent)`);
+  }
   return el;
 }
 
@@ -246,16 +271,23 @@ function openMenu(row, anchor) {
   closeMenu();
   menu = document.createElement("div");
   menu.className = "gcr-menu";
-  themed(menu);
+  chatTheme(menu);
   const head = document.createElement("div");
   head.className = "gcr-menu-head";
   head.textContent = "Remind me about this";
   menu.appendChild(head);
 
-  const item = (label, fn) => {
+  const item = (label, fn, hint) => {
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = label;
+    b.className = "gcr-menu-item";
+    b.append(label);
+    if (hint) {
+      const h = document.createElement("span");
+      h.className = "gcr-menu-hint";
+      h.textContent = hint;
+      b.appendChild(h);
+    }
     b.addEventListener("click", (e) => {
       e.stopPropagation();
       closeMenu();
@@ -263,12 +295,22 @@ function openMenu(row, anchor) {
     });
     menu.appendChild(b);
   };
-  RTime.PRESETS.forEach((p) => item(p.label, () => remindAt(row, p.at(Date.now()))));
+  RTime.PRESETS.forEach((p) => {
+    const at = p.at(Date.now());
+    item(p.label, () => remindAt(row, at), /\d:\d/.test(p.label) ? "" : RTime.formatTime(at));
+  });
+  const sep = document.createElement("div");
+  sep.className = "gcr-menu-sep";
+  const customHead = document.createElement("div");
+  customHead.className = "gcr-menu-sub";
+  customHead.textContent = "Custom time";
+  menu.append(sep, customHead);
 
   const picker = RTime.createPicker(Date.now() + 3600e3);
   const go = document.createElement("button");
   go.type = "button";
-  go.textContent = "Set custom time";
+  go.className = "gcr-menu-primary";
+  go.textContent = "Set reminder";
   go.addEventListener("click", (e) => {
     e.stopPropagation();
     const when = picker.get();
@@ -296,8 +338,10 @@ function openMenu(row, anchor) {
   menu.style.maxHeight = `${Math.max(120, maxH)}px`;
   menu.style.overflowY = "auto";
   menu.style.top = `${Math.max(M, top)}px`;
-  menu.style.left = `${Math.max(M, Math.min(r.right - 200, window.innerWidth - 200 - 2 * M))}px`;
+  menu.style.left = `${Math.max(M, Math.min(r.right - 264, window.innerWidth - 264 - 2 * M))}px`;
+  menu.style.transformOrigin = `${Math.max(0, Math.round(r.left + r.width / 2 - parseFloat(menu.style.left)))}px ${top >= r.bottom ? "top" : "bottom"}`;
   menu.style.visibility = "";
+  requestAnimationFrame(() => menu && menu.classList.add("gcr-open"));
 }
 
 // Chat's own hover toolbar (reactions, reply, more...). We put our clock button inside it, next to its
@@ -436,7 +480,7 @@ document.addEventListener("mouseover", onMouseOver, { passive: true });
 document.addEventListener("click", onDocClick);
 document.addEventListener("scroll", onScroll, { capture: true, passive: true });
 
-// "Reminder set for ..." label above each message that has an active reminder, like Slack's "To-do added".
+// "Reminder set for ..." label above each message that has an active reminder.
 // Chat re-renders messages as you scroll, so labels are re-applied on DOM changes, on storage changes, and
 // every minute (to turn "set for" into "due" when the time passes).
 let labels = {};
@@ -451,9 +495,22 @@ function makeLabel() {
   view.textContent = "View reminders";
   view.addEventListener("click", (e) => {
     e.stopPropagation();
-    alive() ? chrome.runtime.sendMessage({ type: "popup" }) : shutdown();
+    if (!alive()) return shutdown();
+    launcherEl ? launcherEl.click() : chrome.runtime.sendMessage({ type: "popup" });
   });
-  el.append(RTime.icon("clock", 14), text, document.createTextNode("·"), view);
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "gcr-label-remove";
+  remove.textContent = "Remove";
+  remove.title = "Remove this reminder";
+  remove.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!alive()) return shutdown();
+    const ids = el._gcrIds || [];
+    el.remove();
+    try { await Promise.all(ids.map((id) => send({ type: "delete", id }))); toast("Reminder removed"); } catch (_) { toast("Couldn't remove the reminder"); }
+  });
+  el.append(RTime.icon("clock", 14), text, document.createTextNode("·"), view, document.createTextNode("·"), remove);
   return el;
 }
 
@@ -500,6 +557,7 @@ function renderLabels() {
       if (!el || !el.classList.contains("gcr-label")) row.prepend((el = makeLabel()));
       // Only touch the DOM when something changed: our own writes would otherwise re-trigger the observer forever.
       const span = el.querySelector("span");
+      el._gcrIds = l.ids;
       if (span.textContent !== l.text) span.textContent = l.text;
       if (el.classList.contains("gcr-label-due") !== l.overdue) el.classList.toggle("gcr-label-due", l.overdue);
       const end = isRightAligned(row);
@@ -547,9 +605,108 @@ if (window.top === window) {
   launcher.append(icon, badge);
   themed(launcher);
   launcherEl = launcher;
-  launcher.addEventListener("click", () => (alive() ? chrome.runtime.sendMessage({ type: "popup" }) : shutdown()));
+  launcher.addEventListener("click", () => (alive() ? togglePanel() : shutdown()));
   launcher.addEventListener("mouseenter", () => themed(launcher));
   document.body.appendChild(launcher);
+
+  // In-page reminders panel (rounded, themed, anchored under the launcher). Rendered by the page, so unlike the
+  // toolbar popup its corners can be styled.
+  const call = (msg) => chrome.runtime.sendMessage(msg).then((r) => {
+    if (!r || !r.ok) throw new Error((r && r.error) || "no response");
+    return r.data;
+  });
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  let panel = null;
+  const closePanel = () => {
+    if (!panel) return;
+    const p = panel;
+    panel = panelEl = null;
+    p.classList.remove("gcr-open");
+    setTimeout(() => p.remove(), 180);
+    document.removeEventListener("pointerdown", onPanelOutside, true);
+    document.removeEventListener("keydown", onPanelKey, true);
+  };
+  const onPanelOutside = (e) => { if (panel && !panel.contains(e.target) && !launcher.contains(e.target)) closePanel(); };
+  const onPanelKey = (e) => { if (e.key === "Escape") closePanel(); };
+
+  const renderPanel = async () => {
+    if (!panel || !alive()) return;
+    let items;
+    try { items = (await call({ type: "list" })).filter((r) => !r.done).sort((a, b) => a.when - b.when); } catch (_) { return; }
+    if (!panel) return;
+    const now = Date.now();
+    const dueCount = items.filter((r) => r.when <= now).length;
+    panel.querySelector(".gcr-p-sub").textContent = !items.length ? "" : dueCount ? `${dueCount} due · ${items.length} total` : `${items.length} upcoming`;
+    const list = panel.querySelector(".gcr-p-list");
+    list.replaceChildren();
+    panel.querySelector(".gcr-p-empty").style.display = items.length ? "none" : "block";
+    for (const r of items) {
+      const row = el("li", "gcr-p-row");
+      row.title = "Open this message in Chat";
+      row.addEventListener("click", () => { call({ type: "open", id: r.id }).catch(() => {}); closePanel(); });
+      const check = el("input", "gcr-p-check");
+      check.type = "checkbox";
+      check.title = "Mark as done";
+      check.setAttribute("aria-label", "Mark as done");
+      check.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "complete", id: r.id }).catch(() => {}); renderPanel(); });
+      const body = el("div", "gcr-p-body");
+      if (r.sender) body.append(el("div", "gcr-p-from", r.sender));
+      body.append(el("div", "gcr-p-text", r.text));
+      const meta = el("div", "gcr-p-meta");
+      if (r.when <= now) meta.append(el("span", "gcr-p-duepill", "Due"));
+      meta.append(el("span", null, RTime.formatWhen(r.when)));
+      body.append(meta);
+      const actions = el("div", "gcr-p-actions");
+      const snooze = el("button", "gcr-p-snooze", "Snooze 10m");
+      snooze.type = "button";
+      snooze.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "snooze", id: r.id, ms: 10 * 60e3 }).catch(() => {}); renderPanel(); });
+      const del = el("button", "gcr-p-del");
+      del.type = "button";
+      del.title = "Delete";
+      del.setAttribute("aria-label", "Delete");
+      del.appendChild(RTime.icon("close", 16));
+      del.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "delete", id: r.id }).catch(() => {}); renderPanel(); });
+      actions.append(snooze, del);
+      row.append(check, body, actions);
+      list.appendChild(row);
+    }
+  };
+
+  const openPanel = () => {
+    panel = panelEl = themed(el("div", "gcr-panel"));
+    chatTheme(panel);
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Reminders");
+    const head = el("div", "gcr-p-head");
+    const titles = el("div");
+    titles.append(el("div", "gcr-p-title", "Reminders"), el("div", "gcr-p-sub"));
+    const all = el("button", "gcr-p-all", "View all");
+    all.type = "button";
+    all.addEventListener("click", () => { call({ type: "overview" }).catch(() => {}); closePanel(); });
+    head.append(titles, all);
+    const empty = el("div", "gcr-p-empty");
+    empty.append(el("b", null, "All caught up"), el("span", null, "Hover a message and click the clock to add a reminder."));
+    panel.append(head, el("ul", "gcr-p-list"), empty);
+    const r = launcher.getBoundingClientRect();
+    const w = Math.min(420, innerWidth - 24);
+    panel.style.width = `${w}px`;
+    panel.style.left = `${Math.max(12, Math.min(r.left, innerWidth - w - 12))}px`;
+    panel.style.top = `${Math.round(r.bottom + 8)}px`;
+    panel.style.maxHeight = `${Math.max(200, innerHeight - r.bottom - 24)}px`;
+    panel.style.transformOrigin = `${Math.round(r.left + r.width / 2 - parseFloat(panel.style.left))}px top`;
+    document.body.appendChild(panel);
+    requestAnimationFrame(() => panel && panel.classList.add("gcr-open"));
+    document.addEventListener("pointerdown", onPanelOutside, true);
+    document.addEventListener("keydown", onPanelKey, true);
+    renderPanel();
+  };
+  const togglePanel = () => (panel ? closePanel() : openPanel());
+  chrome.storage.onChanged.addListener((_c, area) => area === "local" && renderPanel());
 
   // Red + count when something is due; faded otherwise (future reminders don't count).
   const refresh = () => {
@@ -596,10 +753,68 @@ if (window.top === window) {
     }
     return right;
   };
+  // Preferred spot: a pill right of the "New chat" button, matching its height. Found by its text; the nearest
+  // ancestor with a plausible button size is taken as the button.
+  const NEW_CHAT = /^(New chat|發起新聊天|新聊天|新对话|新對話)$/;
+  const findNewChat = () => {
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (!NEW_CHAT.test(n.nodeValue.trim())) continue;
+      for (let el = n.parentElement, i = 0; el && i < 6; el = el.parentElement, i++) {
+        const r = el.getBoundingClientRect();
+        if (r.height >= 36 && r.height <= 72 && r.width >= 90 && r.width <= 280 && r.left < 400 && r.top < 200) return el;
+      }
+    }
+    return null;
+  };
+  // Chat popups (e.g. the New chat panel) must cover the button. Stacking order alone wasn't enough, so hide the
+  // button while something popup-like is the topmost element at its centre. pointer-events:none makes the
+  // launcher invisible to elementsFromPoint, so we see what is really underneath.
+  const POPUP = "[role='dialog'], [role='alertdialog'], [role='menu'], [role='listbox'], [aria-modal='true']";
+  const coveredByPopup = () => {
+    const r = launcher.getBoundingClientRect();
+    if (!r.width) return false;
+    launcher.style.pointerEvents = "none";
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    launcher.style.pointerEvents = "";
+    for (let el = top, i = 0; el && el !== document.body && i < 14; el = el.parentElement, i++) {
+      if (el.matches(POPUP)) return true;
+      const cs = getComputedStyle(el);
+      if ((cs.position === "fixed" || cs.position === "absolute") && parseInt(cs.zIndex, 10) >= 1000) return true;
+    }
+    return false;
+  };
+  const syncCover = () => {
+    if (!alive()) return shutdown();
+    launcher.style.visibility = coveredByPopup() ? "hidden" : "";
+  };
   const place = () => {
     if (!alive()) return shutdown();
     themed(launcher);
     refresh();
+    const ncEl = findNewChat();
+    if (ncEl) {
+      const nc = ncEl.getBoundingClientRect();
+      // Copy the look of Chat's own button (user theme colour, corner radius, shadow) from the nearest styled element.
+      let look = null;
+      for (let el = ncEl, i = 0; el && i < 4 && !look; el = el.parentElement, i++) {
+        const cs = getComputedStyle(el);
+        if (!/^rgba\(.*,\s*0\)$|^transparent$/.test(cs.backgroundColor)) look = cs;
+      }
+      launcher.classList.add("gcr-pill");
+      launcher.style.setProperty("--gcr-pill-bg", look ? look.backgroundColor : "");
+      launcher.style.setProperty("--gcr-pill-fg", look ? look.color : "");
+      launcher.style.setProperty("--gcr-pill-shadow", look ? look.boxShadow : "none");
+      launcher.style.setProperty("--gcr-pill-radius", look ? look.borderRadius : `${Math.round(nc.height / 3)}px`);
+      launcher.style.left = `${Math.round(nc.right + 10)}px`;
+      launcher.style.top = `${Math.round(nc.top)}px`;
+      launcher.style.height = `${Math.round(nc.height)}px`;
+      launcher.style.minWidth = `${Math.round(nc.height)}px`;
+      return;
+    }
+    // New chat not visible (e.g. collapsed sidebar): sit right of the header wordmark instead.
+    launcher.classList.remove("gcr-pill");
+    launcher.style.height = launcher.style.minWidth = "";
     const word = findWordmark();
     const right = Math.max(word ? word.right : 0, scanHeaderRight());
     if (right < 60 || right > 340) return; // implausible: keep the fixed fallback position from the CSS
@@ -607,6 +822,10 @@ if (window.top === window) {
     launcher.style.top = "10px";
   };
   place();
+  syncCover();
   addEventListener("resize", place);
+  document.addEventListener("click", () => setTimeout(syncCover, 120), true);
+  document.addEventListener("keyup", () => setTimeout(syncCover, 120), true);
+  setInterval(syncCover, 500);
   placeTimer = setInterval(place, 3000); // header renders late; also keeps the due state current as time passes
 }

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Google Chat Reminders",
   "version": "1.0.0",
-  "description": "Slack-style reminders for Google Chat: remind yourself about a message, get a desktop notification.",
+  "description": "Reminders for Google Chat: remind yourself about a message, get a desktop notification.",
   "permissions": [
     "alarms",
     "notifications",
