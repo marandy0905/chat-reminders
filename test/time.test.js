@@ -41,4 +41,7 @@ assert.deepStrictEqual(labels, {
   msgBBBBBBBB: { text: `Reminder due @${now - 60e3}`, overdue: true, ids: ["c"] },
 });
 assert.deepStrictEqual(T.reminderLabels({}, now, fmt), {});
+assert.ok(T.compareVersions("1.10.0", "1.9.2") > 0);
+assert.ok(T.compareVersions("1.0.0", "1.0.1") < 0);
+assert.strictEqual(T.compareVersions("1.0", "1.0.0"), 0);
 console.log("ok");

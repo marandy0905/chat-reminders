@@ -98,6 +98,8 @@
 .gcr-panel button:hover { background: var(--gcr-hover); color: var(--gcr-fg); }
 .gcr-panel button:active { transform: scale(.94); }
 .gcr-p-all { padding: 4px 10px; font-size: 13px; font-weight: 500; color: #4c9bff !important; }
+.gcr-p-update { margin: 0 14px 8px; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, #4c9bff 16%, transparent); color: #4c9bff; font-size: 12.5px; font-weight: 500; }
+.gcr-p-update[hidden] { display: none; }
 .gcr-p-list { margin: 0; padding: 0 8px 8px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
 .gcr-p-row { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 11px 12px; border-radius: 12px; cursor: pointer; transition: background .15s; }
 .gcr-p-row:hover { background: var(--gcr-hover); }

@@ -691,7 +691,14 @@ if (window.top === window) {
     head.append(titles, all);
     const empty = el("div", "gcr-p-empty");
     empty.append(el("b", null, "All caught up"), el("span", null, "Hover a message and click the clock to add a reminder."));
-    panel.append(head, el("ul", "gcr-p-list"), empty);
+    const note = el("div", "gcr-p-update");
+    note.hidden = true;
+    call({ type: "updateInfo" }).then((u) => {
+      if (!u || !panel) return;
+      note.textContent = `Update available: v${u.version}. Run git pull, then reload the extension.`;
+      note.hidden = false;
+    }).catch(() => {});
+    panel.append(head, note, el("ul", "gcr-p-list"), empty);
     const r = launcher.getBoundingClientRect();
     const w = Math.min(420, innerWidth - 24);
     panel.style.width = `${w}px`;

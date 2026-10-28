@@ -46,6 +46,8 @@ button.snooze { padding: 4px 10px; font-size: 12px; font-weight: 500; }
 button.del { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; }
 button.del:hover { color: var(--danger); }
 
+#update { display: block; margin: 0 12px 10px; padding: 8px 12px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); font-size: 12.5px; font-weight: 500; text-decoration: none; }
+#update[hidden] { display: none; }
 #empty { display: none; padding: 40px 24px 36px; text-align: center; color: var(--muted); }
 #empty p { margin: 0; font-size: 13px; }
 #empty p b { display: block; margin: 10px 0 4px; font-size: 17px; font-weight: 600; color: var(--fg); letter-spacing: -.01em; }

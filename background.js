@@ -74,6 +74,7 @@ chrome.runtime.onInstalled.addListener(resync);
 chrome.runtime.onStartup.addListener(resync);
 
 chrome.alarms.onAlarm.addListener(async ({ name }) => {
+  if (name === UPDATE_ALARM) return checkUpdate();
   const r = (await load())[name];
   if (!r || r.done) return;
   chrome.notifications.create(r.id, {
@@ -86,6 +87,44 @@ chrome.alarms.onAlarm.addListener(async ({ name }) => {
     buttons: [{ title: "Snooze 20 min" }, { title: "Mark as done" }],
   });
 });
+
+// Update check for unpacked (git clone) installs, which Chrome never updates by itself: once a day, compare our
+// manifest version with the one on the repo's main branch and tell the user to `git pull` + reload.
+const REPO_URL = "https://github.com/marandy0905/chat-reminders";
+const REMOTE_MANIFEST = "https://raw.githubusercontent.com/marandy0905/chat-reminders/main/manifest.json";
+const UPDATE_ALARM = "gcr-update-check";
+const UPDATE_NOTE = "gcr-update";
+
+async function checkUpdate() {
+  try {
+    const res = await fetch(REMOTE_MANIFEST, { cache: "no-store" });
+    if (!res.ok) return;
+    const latest = String((await res.json()).version || "");
+    const current = chrome.runtime.getManifest().version;
+    const { update } = await chrome.storage.local.get("update");
+    if (!latest || RTime.compareVersions(latest, current) <= 0) {
+      if (update) await chrome.storage.local.remove("update");
+      return chrome.action.setBadgeText({ text: "" });
+    }
+    await chrome.storage.local.set({ update: { version: latest, notified: update && update.version === latest && update.notified } });
+    chrome.action.setBadgeText({ text: "NEW" });
+    chrome.action.setBadgeBackgroundColor({ color: "#0a66e6" });
+    if (!(update && update.version === latest && update.notified)) {
+      await chrome.storage.local.set({ update: { version: latest, notified: true } });
+      chrome.notifications.create(UPDATE_NOTE, {
+        type: "basic",
+        iconUrl: "icons/icon128.png",
+        title: "Chat Reminders update available",
+        message: `Version ${latest} is out (you have ${current}). Run git pull in your clone, then reload the extension at chrome://extensions.`,
+      });
+    }
+  } catch (_) { /* offline or rate-limited: try again at the next check */ }
+}
+const scheduleUpdateCheck = () => {
+  chrome.alarms.create(UPDATE_ALARM, { delayInMinutes: 1, periodInMinutes: 12 * 60 });
+};
+chrome.runtime.onInstalled.addListener(scheduleUpdateCheck);
+chrome.runtime.onStartup.addListener(scheduleUpdateCheck);
 
 async function open(r) {
   // Only match Chat itself (never the Gmail app, which lives at mail.google.com/mail/ and can also be a PWA).
@@ -111,6 +150,10 @@ chrome.notifications.onButtonClicked.addListener(async (id, idx) => {
 });
 
 chrome.notifications.onClicked.addListener(async (id) => {
+  if (id === UPDATE_NOTE) {
+    await chrome.tabs.create({ url: `${REPO_URL}#updating` });
+    return chrome.notifications.clear(id);
+  }
   const r = (await load())[id];
   if (r) await open(r);
   await chrome.notifications.clear(id);
@@ -138,6 +181,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     complete: () => complete(msg.id),
     popup: () => openPopup(),
     overview: () => openOverview(),
+    updateInfo: async () => (await chrome.storage.local.get("update")).update || null,
     open: async () => { const r = (await load())[msg.id]; if (r) await open(r); },
   }[msg.type];
   if (!run) return false;
