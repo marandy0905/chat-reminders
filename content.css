@@ -77,6 +77,8 @@
 .gcr-label.gcr-label-end { margin-left: auto; margin-right: 12px; }
 .gcr-label button { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-decoration: none; }
 .gcr-label button:hover { text-decoration: underline; }
+.gcr-label .gcr-label-remove { opacity: .75; }
+.gcr-label .gcr-label-remove:hover { opacity: 1; color: var(--gcr-due, #d93025); }
 
 /* In-page reminders panel. */
 .gcr-panel {

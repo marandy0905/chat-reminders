@@ -498,7 +498,19 @@ function makeLabel() {
     if (!alive()) return shutdown();
     launcherEl ? launcherEl.click() : chrome.runtime.sendMessage({ type: "popup" });
   });
-  el.append(RTime.icon("clock", 14), text, document.createTextNode("·"), view);
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.className = "gcr-label-remove";
+  remove.textContent = "Remove";
+  remove.title = "Remove this reminder";
+  remove.addEventListener("click", async (e) => {
+    e.stopPropagation();
+    if (!alive()) return shutdown();
+    const ids = el._gcrIds || [];
+    el.remove();
+    try { await Promise.all(ids.map((id) => send({ type: "delete", id }))); toast("Reminder removed"); } catch (_) { toast("Couldn't remove the reminder"); }
+  });
+  el.append(RTime.icon("clock", 14), text, document.createTextNode("·"), view, document.createTextNode("·"), remove);
   return el;
 }
 
@@ -545,6 +557,7 @@ function renderLabels() {
       if (!el || !el.classList.contains("gcr-label")) row.prepend((el = makeLabel()));
       // Only touch the DOM when something changed: our own writes would otherwise re-trigger the observer forever.
       const span = el.querySelector("span");
+      el._gcrIds = l.ids;
       if (span.textContent !== l.text) span.textContent = l.text;
       if (el.classList.contains("gcr-label-due") !== l.overdue) el.classList.toggle("gcr-label-due", l.overdue);
       const end = isRightAligned(row);
