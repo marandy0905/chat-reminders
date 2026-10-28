@@ -695,7 +695,7 @@ if (window.top === window) {
     note.hidden = true;
     call({ type: "updateInfo" }).then((u) => {
       if (!u || !panel) return;
-      note.textContent = `Update available: v${u.version}. Click to update.`;
+      note.textContent = RTime.t("banner", { version: u.version });
       note.hidden = false;
       note.style.cursor = "pointer";
       note.addEventListener("click", () => { call({ type: "openUpdate" }).catch(() => {}); closePanel(); });

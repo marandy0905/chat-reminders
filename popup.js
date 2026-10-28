@@ -76,7 +76,7 @@ async function render() {
 chrome.storage.local.get("update").then(({ update }) => {
   if (!update || RTime.compareVersions(update.version, chrome.runtime.getManifest().version) <= 0) return;
   const a = $("update");
-  a.textContent = `Update available: v${update.version}. Click to update.`;
+  a.textContent = RTime.t("banner", { version: update.version });
   a.hidden = false;
   a.addEventListener("click", (e) => { e.preventDefault(); send({ type: "openUpdate" }); });
 });
