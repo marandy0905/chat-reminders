@@ -1,0 +1,11 @@
+{
+  "description": {
+    "message": "Reminders for Google Chat: remind yourself about a message, get a desktop notification."
+  },
+  "actionTitle": {
+    "message": "Reminders"
+  },
+  "commandOverview": {
+    "message": "Open the reminders overview"
+  }
+}

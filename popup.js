@@ -1,4 +1,6 @@
 const $ = (id) => document.getElementById(id);
+document.documentElement.lang = RTime.lang();
+document.querySelectorAll("[data-i18n]").forEach((n) => { n.textContent = RTime.t(n.dataset.i18n); });
 const send = (msg) =>
   chrome.runtime.sendMessage(msg).then((r) => {
     if (!r || !r.ok) throw new Error((r && r.error) || "no response");
@@ -12,7 +14,7 @@ async function render() {
   $("empty").style.display = items.length ? "none" : "block";
   const now = Date.now();
   const dueCount = items.filter((r) => r.when <= now).length;
-  $("sub").textContent = !items.length ? "" : dueCount ? `${dueCount} due · ${items.length} total` : `${items.length} upcoming`;
+  $("sub").textContent = !items.length ? "" : dueCount ? RTime.t("sub_due", { due: dueCount, total: items.length }) : RTime.t("sub_up", { n: items.length });
   for (const r of items) {
     const li = document.createElement("li");
     const t = document.createElement("div");
@@ -31,7 +33,7 @@ async function render() {
     if (r.when <= now) {
       const due = document.createElement("span");
       due.className = "due";
-      due.textContent = "Due";
+      due.textContent = RTime.t("due");
       meta.append(due);
     }
     const when = document.createElement("span");
@@ -42,8 +44,8 @@ async function render() {
     const check = document.createElement("input");
     check.type = "checkbox";
     check.className = "check";
-    check.title = "Mark as done";
-    check.setAttribute("aria-label", "Mark as done");
+    check.title = RTime.t("mark_done");
+    check.setAttribute("aria-label", RTime.t("mark_done"));
     check.addEventListener("click", async (e) => {
       e.stopPropagation();
       await send({ type: "complete", id: r.id });
@@ -60,13 +62,13 @@ async function render() {
       x.addEventListener("click", async (e) => { e.stopPropagation(); await fn(); render(); });
       return x;
     };
-    const del = mk("", "Delete", () => send({ type: "delete", id: r.id }), "del");
+    const del = mk("", RTime.t("del"), () => send({ type: "delete", id: r.id }), "del");
     del.appendChild(RTime.icon("close", 16));
     const actions = document.createElement("div");
     actions.className = "actions";
-    actions.append(mk("Snooze 10m", "Snooze 10 minutes", () => send({ type: "snooze", id: r.id, ms: 10 * 60e3 }), "snooze"), del);
+    actions.append(mk(RTime.t("snooze_10"), RTime.t("snooze_10_title"), () => send({ type: "snooze", id: r.id, ms: 10 * 60e3 }), "snooze"), del);
 
-    li.title = "Open this message in Chat";
+    li.title = RTime.t("open_msg");
     li.addEventListener("click", () => send({ type: "open", id: r.id }));
     li.append(check, t, actions);
     ul.appendChild(li);

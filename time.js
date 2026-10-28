@@ -4,12 +4,14 @@
 
   // Presets used by the hover menu and popup chips. Each returns an epoch ms.
   const PRESETS = [
-    { label: "In 20 minutes", at: (now) => now + 20 * MIN },
-    { label: "In 1 hour", at: (now) => now + 60 * MIN },
-    { label: "In 2 hours", at: (now) => now + 120 * MIN },
-    { label: "In 3 hours", at: (now) => now + 180 * MIN },
-    { label: "Tomorrow 10:00", at: (now) => tomorrowAt(now, 10) },
+    { key: "preset_20m", at: (now) => now + 20 * MIN },
+    { key: "preset_1h", at: (now) => now + 60 * MIN },
+    { key: "preset_2h", at: (now) => now + 120 * MIN },
+    { key: "preset_3h", at: (now) => now + 180 * MIN },
+    { key: "preset_tmr", at: (now) => tomorrowAt(now, 10) },
   ];
+  // Labels follow the current language.
+  PRESETS.forEach((p) => Object.defineProperty(p, "label", { get: () => t(p.key), enumerable: true }));
 
   function tomorrowAt(now, hour) {
     const d = new Date(now);
@@ -61,7 +63,7 @@
     const out = {};
     for (const [id, r] of Object.entries(nearest)) {
       const overdue = r.when <= now;
-      out[id] = { text: `${overdue ? "Reminder due" : "Reminder set for"} ${fmt(r.when)}`, overdue, ids: ids[id] };
+      out[id] = { text: t(overdue ? "label_due" : "label_set", { when: fmt(r.when) }), overdue, ids: ids[id] };
     }
     return out;
   }
@@ -134,6 +136,54 @@
   // Wording for the update flow: Traditional Chinese when the browser/system language is, otherwise English.
   const STRINGS = {
     en: {
+      reminders: "Reminders",
+      view_all: "View all",
+      caught_up: "All caught up",
+      empty_hint: "Hover a message in Google Chat and click the clock to add a reminder.",
+      mark_done: "Mark as done",
+      del: "Delete",
+      snooze_10: "Snooze 10m",
+      snooze_10_title: "Snooze 10 minutes",
+      open_msg: "Open this message in Chat",
+      due: "Due",
+      sub_due: "{due} due · {total} total",
+      sub_up: "{n} upcoming",
+      remind_me: "Remind me about this",
+      remind_title: "Remind me about this message",
+      custom_time: "Custom time",
+      set_reminder: "Set reminder",
+      toast_set: "Reminder set for {when}",
+      toast_fail: "Couldn't set reminder (reload the page if the extension was updated)",
+      toast_removed: "Reminder removed",
+      toast_remove_fail: "Couldn't remove the reminder",
+      remove: "Remove",
+      remove_title: "Remove this reminder",
+      view_reminders: "View reminders",
+      label_set: "Reminder set for {when}",
+      label_due: "Reminder due {when}",
+      launcher_title: "Show my reminders",
+      launcher_due_one: "{n} reminder due",
+      launcher_due_other: "{n} reminders due",
+      msg_fallback: "Message in Google Chat",
+      notif_reminder: "Reminder",
+      btn_snooze20: "Snooze 20 min",
+      preset_20m: "In 20 minutes",
+      preset_1h: "In 1 hour",
+      preset_2h: "In 2 hours",
+      preset_3h: "In 3 hours",
+      preset_tmr: "Tomorrow 10:00",
+      ov_title: "Reminders",
+      ov_empty: "No reminders yet. Hover a message in Google Chat and click the clock button, or use the toolbar popup.",
+      sec_overdue: "Overdue",
+      sec_today: "Today",
+      sec_tomorrow: "Tomorrow",
+      sec_later: "Later",
+      sec_completed: "Completed",
+      completed_at: "Completed {when}",
+      from_message: "from message",
+      reactivate: "Reactivate",
+      snooze: "Snooze",
+      set_custom: "Set custom time",
       page_title: "Update Chat Reminders",
       versions_new: "You have v{current}. v{latest} is available.",
       versions_none: "You have v{current}. No newer version found yet.",
@@ -161,6 +211,54 @@
       notif_msg: "Version {latest} is out (you have {current}). Click to update in one step.",
     },
     "zh-TW": {
+      reminders: "提醒",
+      view_all: "查看全部",
+      caught_up: "全部完成了",
+      empty_hint: "將滑鼠移到 Google Chat 的訊息上，點選時鐘按鈕即可新增提醒。",
+      mark_done: "標示為完成",
+      del: "刪除",
+      snooze_10: "延後 10 分鐘",
+      snooze_10_title: "延後 10 分鐘",
+      open_msg: "在 Chat 中開啟這則訊息",
+      due: "已到期",
+      sub_due: "{due} 則已到期 · 共 {total} 則",
+      sub_up: "{n} 則即將到來",
+      remind_me: "提醒我這則訊息",
+      remind_title: "提醒我這則訊息",
+      custom_time: "自訂時間",
+      set_reminder: "設定提醒",
+      toast_set: "已設定提醒：{when}",
+      toast_fail: "無法設定提醒（如果擴充功能剛更新過，請重新整理頁面）",
+      toast_removed: "已移除提醒",
+      toast_remove_fail: "無法移除提醒",
+      remove: "移除",
+      remove_title: "移除這個提醒",
+      view_reminders: "查看提醒",
+      label_set: "已設定提醒：{when}",
+      label_due: "提醒已到期：{when}",
+      launcher_title: "顯示我的提醒",
+      launcher_due_one: "{n} 則提醒已到期",
+      launcher_due_other: "{n} 則提醒已到期",
+      msg_fallback: "Google Chat 訊息",
+      notif_reminder: "提醒",
+      btn_snooze20: "延後 20 分鐘",
+      preset_20m: "20 分鐘後",
+      preset_1h: "1 小時後",
+      preset_2h: "2 小時後",
+      preset_3h: "3 小時後",
+      preset_tmr: "明天 10:00",
+      ov_title: "提醒",
+      ov_empty: "還沒有提醒。將滑鼠移到 Google Chat 的訊息上並點選時鐘按鈕，或使用工具列的彈出視窗。",
+      sec_overdue: "已逾期",
+      sec_today: "今天",
+      sec_tomorrow: "明天",
+      sec_later: "之後",
+      sec_completed: "已完成",
+      completed_at: "完成於 {when}",
+      from_message: "來自訊息",
+      reactivate: "重新啟用",
+      snooze: "延後",
+      set_custom: "設定自訂時間",
       page_title: "更新 Chat Reminders",
       versions_new: "你目前是 v{current}，最新版本為 v{latest}。",
       versions_none: "你目前是 v{current}，尚未發現新版本。",
@@ -188,7 +286,10 @@
       notif_msg: "新版本 {latest} 已發布（目前 {current}）。點選即可一鍵更新。",
     },
   };
+  let forced = null; // tests
+  const setLang = (l) => { forced = l; };
   function lang() {
+    if (forced) return forced;
     let l = "en";
     try { l = chrome.i18n.getUILanguage(); } catch (_) { l = (typeof navigator !== "undefined" && navigator.language) || "en"; }
     return /^zh[-_](tw|hk|mo|hant)/i.test(l) ? "zh-TW" : "en";
@@ -198,6 +299,6 @@
     return s.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
   }
 
-  root.RTime = { t, lang, compareVersions, icon, PRESETS, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
+  root.RTime = { t, lang, setLang, compareVersions, icon, PRESETS, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -1,5 +1,6 @@
 const assert = require("assert");
 const T = require("../time.js");
+T.setLang("en");
 
 const now = new Date(2026, 9, 27, 15, 30).getTime();
 assert.strictEqual(T.tomorrowAt(now, 10), new Date(2026, 9, 28, 10, 0).getTime());

@@ -29,6 +29,9 @@ Chrome 無法自動更新這個擴充功能，所以改成一鍵更新。擴充�
 
 注意：請選擇 Chat Reminders 資料夾本身，不要選上層資料夾（例如「文件」，Chrome 會封鎖）。之後的瀏覽工作階段中，Chrome 可能會再次要求確認資料夾存取權。若一鍵更新失敗，請到[最新版本](https://github.com/marandy0905/chat-reminders/releases/latest)下載 **chat-reminders.zip**，解壓縮並覆蓋原資料夾，再到 `chrome://extensions` 重新載入。
 
+## 語言
+整個擴充功能（選單、面板、彈出視窗、總覽、通知、更新頁面）在瀏覽器語言為繁體中文（zh-TW／zh-HK／zh-MO／zh-Hant）時顯示繁體中文，其他語言一律顯示英文。
+
 ## 備註
 - 所有資料都儲存在 `chrome.storage.local`。唯一的網路請求是每日的更新檢查（讀取此專案公開的 `manifest.json`），以及你按下**立即更新**時從 GitHub 下載的發行檔，不會傳送任何提醒資料。
 - Google Chat 的 DOM 經過混淆。如果時鐘按鈕不再出現，請更新 `content.js` 開頭的 `SELECTORS`。

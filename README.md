@@ -33,6 +33,9 @@ Notes: pick the Chat Reminders folder itself, not a parent such as Documents (Ch
 
 Maintainers: when a merge to `main` changes extension code, a GitHub Action bumps the patch version in `manifest.json` and publishes a release with the zip attached (docs-only changes don't count).
 
+## Language
+The whole extension (menus, panel, popup, overview, notifications, update page) is shown in Traditional Chinese when the browser's language is Traditional Chinese (zh-TW / zh-HK / zh-MO / zh-Hant), and in English for every other language.
+
 ## Notes
 - All data stays in `chrome.storage.local`. The only network requests are the daily update check (this repo's public `manifest.json`) and, when you click **Update now**, the release zip from GitHub; no reminder data is sent.
 - Google Chat's DOM is obfuscated. If the clock button stops appearing, update `SELECTORS` at the top of `content.js`.

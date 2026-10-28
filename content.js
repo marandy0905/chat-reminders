@@ -150,7 +150,7 @@ function extract(row) {
   // Fall back to the row's plain visible text rather than saving an empty placeholder.
   if (!text) text = cleanText((row.innerText || row.textContent || "").replace(/\s+/g, " "), sender);
   text = text.slice(0, SNIPPET_LEN);
-  return { text: text || "Message in Google Chat", sender };
+  return { text: text || RTime.t("msg_fallback"), sender };
 }
 
 // Chat's message links look like  https://chat.google.com/room/<space>/<topic>/<message>?cls=10
@@ -256,9 +256,9 @@ async function remindAt(row, when) {
   try {
     const { text, sender } = extract(row);
     await send({ type: "add", text, sender, when, url: permalink(row), source: "message" });
-    toast(`Reminder set for ${RTime.formatWhen(when)}`);
+    toast(RTime.t("toast_set", { when: RTime.formatWhen(when) }));
   } catch (e) {
-    toast("Couldn't set reminder (reload the page if the extension was updated)");
+    toast(RTime.t("toast_fail"));
   }
 }
 
@@ -274,7 +274,7 @@ function openMenu(row, anchor) {
   chatTheme(menu);
   const head = document.createElement("div");
   head.className = "gcr-menu-head";
-  head.textContent = "Remind me about this";
+  head.textContent = RTime.t("remind_me");
   menu.appendChild(head);
 
   const item = (label, fn, hint) => {
@@ -303,14 +303,14 @@ function openMenu(row, anchor) {
   sep.className = "gcr-menu-sep";
   const customHead = document.createElement("div");
   customHead.className = "gcr-menu-sub";
-  customHead.textContent = "Custom time";
+  customHead.textContent = RTime.t("custom_time");
   menu.append(sep, customHead);
 
   const picker = RTime.createPicker(Date.now() + 3600e3);
   const go = document.createElement("button");
   go.type = "button";
   go.className = "gcr-menu-primary";
-  go.textContent = "Set reminder";
+  go.textContent = RTime.t("set_reminder");
   go.addEventListener("click", (e) => {
     e.stopPropagation();
     const when = picker.get();
@@ -419,7 +419,7 @@ function injectInline(row) {
   b.type = "button";
   b.className = "gcr-inline";
   b.style.color = toolbarIconColor(anchor);
-  b.title = "Remind me about this message";
+  b.title = RTime.t("remind_title");
   b.appendChild(RTime.icon("clock", 20));
   b.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -492,7 +492,7 @@ function makeLabel() {
   const text = document.createElement("span");
   const view = document.createElement("button");
   view.type = "button";
-  view.textContent = "View reminders";
+  view.textContent = RTime.t("view_reminders");
   view.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!alive()) return shutdown();
@@ -501,14 +501,14 @@ function makeLabel() {
   const remove = document.createElement("button");
   remove.type = "button";
   remove.className = "gcr-label-remove";
-  remove.textContent = "Remove";
-  remove.title = "Remove this reminder";
+  remove.textContent = RTime.t("remove");
+  remove.title = RTime.t("remove_title");
   remove.addEventListener("click", async (e) => {
     e.stopPropagation();
     if (!alive()) return shutdown();
     const ids = el._gcrIds || [];
     el.remove();
-    try { await Promise.all(ids.map((id) => send({ type: "delete", id }))); toast("Reminder removed"); } catch (_) { toast("Couldn't remove the reminder"); }
+    try { await Promise.all(ids.map((id) => send({ type: "delete", id }))); toast(RTime.t("toast_removed")); } catch (_) { toast(RTime.t("toast_remove_fail")); }
   });
   el.append(RTime.icon("clock", 14), text, document.createTextNode("·"), view, document.createTextNode("·"), remove);
   return el;
@@ -597,7 +597,7 @@ if (window.top === window) {
   const launcher = document.createElement("button");
   launcher.type = "button";
   launcher.className = "gcr-launcher";
-  launcher.title = "Show my reminders";
+  launcher.title = RTime.t("launcher_title");
   const icon = document.createElement("span");
   icon.className = "gcr-icon";
   icon.appendChild(RTime.icon("clock", 22));
@@ -641,34 +641,34 @@ if (window.top === window) {
     if (!panel) return;
     const now = Date.now();
     const dueCount = items.filter((r) => r.when <= now).length;
-    panel.querySelector(".gcr-p-sub").textContent = !items.length ? "" : dueCount ? `${dueCount} due · ${items.length} total` : `${items.length} upcoming`;
+    panel.querySelector(".gcr-p-sub").textContent = !items.length ? "" : dueCount ? RTime.t("sub_due", { due: dueCount, total: items.length }) : RTime.t("sub_up", { n: items.length });
     const list = panel.querySelector(".gcr-p-list");
     list.replaceChildren();
     panel.querySelector(".gcr-p-empty").style.display = items.length ? "none" : "block";
     for (const r of items) {
       const row = el("li", "gcr-p-row");
-      row.title = "Open this message in Chat";
+      row.title = RTime.t("open_msg");
       row.addEventListener("click", () => { call({ type: "open", id: r.id }).catch(() => {}); closePanel(); });
       const check = el("input", "gcr-p-check");
       check.type = "checkbox";
-      check.title = "Mark as done";
-      check.setAttribute("aria-label", "Mark as done");
+      check.title = RTime.t("mark_done");
+      check.setAttribute("aria-label", RTime.t("mark_done"));
       check.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "complete", id: r.id }).catch(() => {}); renderPanel(); });
       const body = el("div", "gcr-p-body");
       if (r.sender) body.append(el("div", "gcr-p-from", r.sender));
       body.append(el("div", "gcr-p-text", r.text));
       const meta = el("div", "gcr-p-meta");
-      if (r.when <= now) meta.append(el("span", "gcr-p-duepill", "Due"));
+      if (r.when <= now) meta.append(el("span", "gcr-p-duepill", RTime.t("due")));
       meta.append(el("span", null, RTime.formatWhen(r.when)));
       body.append(meta);
       const actions = el("div", "gcr-p-actions");
-      const snooze = el("button", "gcr-p-snooze", "Snooze 10m");
+      const snooze = el("button", "gcr-p-snooze", RTime.t("snooze_10"));
       snooze.type = "button";
       snooze.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "snooze", id: r.id, ms: 10 * 60e3 }).catch(() => {}); renderPanel(); });
       const del = el("button", "gcr-p-del");
       del.type = "button";
-      del.title = "Delete";
-      del.setAttribute("aria-label", "Delete");
+      del.title = RTime.t("del");
+      del.setAttribute("aria-label", RTime.t("del"));
       del.appendChild(RTime.icon("close", 16));
       del.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "delete", id: r.id }).catch(() => {}); renderPanel(); });
       actions.append(snooze, del);
@@ -681,16 +681,16 @@ if (window.top === window) {
     panel = panelEl = themed(el("div", "gcr-panel"));
     chatTheme(panel);
     panel.setAttribute("role", "dialog");
-    panel.setAttribute("aria-label", "Reminders");
+    panel.setAttribute("aria-label", RTime.t("reminders"));
     const head = el("div", "gcr-p-head");
     const titles = el("div");
-    titles.append(el("div", "gcr-p-title", "Reminders"), el("div", "gcr-p-sub"));
-    const all = el("button", "gcr-p-all", "View all");
+    titles.append(el("div", "gcr-p-title", RTime.t("reminders")), el("div", "gcr-p-sub"));
+    const all = el("button", "gcr-p-all", RTime.t("view_all"));
     all.type = "button";
     all.addEventListener("click", () => { call({ type: "overview" }).catch(() => {}); closePanel(); });
     head.append(titles, all);
     const empty = el("div", "gcr-p-empty");
-    empty.append(el("b", null, "All caught up"), el("span", null, "Hover a message and click the clock to add a reminder."));
+    empty.append(el("b", null, RTime.t("caught_up")), el("span", null, RTime.t("empty_hint")));
     const note = el("div", "gcr-p-update");
     note.hidden = true;
     call({ type: "updateInfo" }).then((u) => {
@@ -725,7 +725,7 @@ if (window.top === window) {
       const due = Object.values(o.reminders || {}).filter((r) => !r.done && r.when <= now).length;
       badge.textContent = due ? String(due) : "";
       launcher.classList.toggle("gcr-due", due > 0);
-      launcher.title = due ? `${due} reminder${due > 1 ? "s" : ""} due` : "Show my reminders";
+      launcher.title = due ? RTime.t(due > 1 ? "launcher_due_other" : "launcher_due_one", { n: due }) : RTime.t("launcher_title");
     }).catch(() => {});
   };
   chrome.storage.onChanged.addListener((_c, area) => area === "local" && refresh());
