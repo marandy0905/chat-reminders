@@ -43,6 +43,31 @@ function themed(el) {
   return el;
 }
 
+// Make a floating surface follow the user's Chat theme (not just light/dark): take the surface and text colours
+// from the page (sidebar area; body inside iframes) and New chat's fill for hover, via the --gcr-* variables.
+function chatTheme(el) {
+  const solid = (n) => {
+    for (; n; n = n.parentElement) {
+      const c = getComputedStyle(n).backgroundColor;
+      if (!/^rgba\(.*,\s*0\)$|^transparent$/.test(c)) return c;
+    }
+    return "";
+  };
+  themed(el);
+  const under = (window.top === window && document.elementFromPoint(24, Math.min(300, innerHeight - 2))) || document.body;
+  const bg = solid(under) || solid(document.body);
+  const fg = getComputedStyle(under).color;
+  const fill = launcherEl && launcherEl.style.getPropertyValue("--gcr-pill-bg");
+  if (bg) el.style.setProperty("--gcr-bg", bg);
+  if (fg) {
+    el.style.setProperty("--gcr-fg", fg);
+    el.style.setProperty("--gcr-muted", `color-mix(in srgb, ${fg} 62%, transparent)`);
+    el.style.setProperty("--gcr-border", `color-mix(in srgb, ${fg} 16%, transparent)`);
+    el.style.setProperty("--gcr-hover", fill || `color-mix(in srgb, ${fg} 10%, transparent)`);
+  }
+  return el;
+}
+
 // Chat's own hover toolbar / menus / tooltips and visually-hidden metadata live inside the message row.
 // Their labels must not end up in the reminder text. Selectors are best effort (Chat's markup is obfuscated).
 const UI_NODES = "button, [role='button'], [role='toolbar'], [role='menu'], [role='menuitem'], [role='tooltip'], [aria-hidden='true'], [data-tooltip], [data-emoji-picker-button-id], [data-menu-action], .gcr-label, style, script";
@@ -246,7 +271,7 @@ function openMenu(row, anchor) {
   closeMenu();
   menu = document.createElement("div");
   menu.className = "gcr-menu";
-  themed(menu);
+  chatTheme(menu);
   const head = document.createElement("div");
   head.className = "gcr-menu-head";
   head.textContent = "Remind me about this";
@@ -621,28 +646,7 @@ if (window.top === window) {
 
   const openPanel = () => {
     panel = panelEl = themed(el("div", "gcr-panel"));
-    // Follow the user's Chat theme: take the page surface and text colours, and New chat's fill for hover/accents.
-    const solid = (n) => {
-      for (; n; n = n.parentElement) {
-        const c = getComputedStyle(n).backgroundColor;
-        if (!/^rgba\(.*,\s*0\)$|^transparent$/.test(c)) return c;
-      }
-      return "";
-    };
-    const lr = launcher.getBoundingClientRect();
-    launcher.style.pointerEvents = "none";
-    const under = document.elementFromPoint(Math.max(2, lr.left - 40), Math.min(innerHeight - 2, lr.bottom + 40)) || document.body;
-    launcher.style.pointerEvents = "";
-    const pageBg = solid(under) || solid(document.body);
-    const pageFg = getComputedStyle(under).color;
-    const fill = launcher.style.getPropertyValue("--gcr-pill-bg");
-    if (pageBg) panel.style.setProperty("--gcr-bg", pageBg);
-    if (pageFg) {
-      panel.style.setProperty("--gcr-fg", pageFg);
-      panel.style.setProperty("--gcr-muted", `color-mix(in srgb, ${pageFg} 62%, transparent)`);
-      panel.style.setProperty("--gcr-border", `color-mix(in srgb, ${pageFg} 16%, transparent)`);
-    }
-    if (fill) panel.style.setProperty("--gcr-hover", fill);
+    chatTheme(panel);
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-label", "Reminders");
     const head = el("div", "gcr-p-head");
