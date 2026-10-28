@@ -55,7 +55,7 @@ const NOISE = [
   /Last Reply:?\s*[\d:]+\s*(?:[AP]M)?/gi,
   /複製連結/g, /在即時通訊中開啟/g, /在聊天室中開啟/g, /在聊天室開啟/g, /在對話中開啟/g,
   /已於[^,，\s]*編輯/g, /已編輯/g, /\d+\s*則回覆\s*[,，]?\s*(?:最近回覆[:：]?\s*[^,，\s]*)?/g,
-  /(?:^|\s):[a-z0-9_+-]{2,30}:(?=\s|$)/gi, /[,，]\s*(?:(?:Yesterday|Today)\s+)?(?:(?:上午|下午)\s*)?\d{1,2}:\d{2}\s*(?:[AP]M)?\s*(?=[,，]|$)/gi,
+  /(?:^|\s):[a-z0-9_+-]{2,30}:(?=\s|$)/gi, /[,，]\s*(?:(?:Yesterday|Today|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+)?(?:(?:上午|下午)\s*)?\d{1,2}:\d{2}\s*(?:[AP]M)?\s*(?=[,，]|$)/gi,
 ];
 
 // Screen-reader prefixes/suffixes such as "1 unread," at the start or ", min" at the end.
@@ -82,7 +82,10 @@ function tidy(t) {
 
 function cleanText(raw, sender) {
   let t = raw;
-  if (sender) t = t.split(sender).join(" ");
+  if (sender) {
+    // Your own messages show "You" in place of your name.
+    t = t.includes(sender) ? t.split(sender).join(" ") : t.replace(/^\s*You\b/, " ");
+  }
   for (const re of NOISE) t = t.replace(re, " ");
   // Tidy first: edge patterns like ", 11 min" only match once trailing separators (", 11 min ,") are gone.
   t = tidy(t);
@@ -303,12 +306,15 @@ function scheduleHide() {
 
 // Chat's own hover toolbar (reactions, reply, more...). We put our clock button inside it, next to its
 // "More" button, so it looks native. Found by the buttons' aria-labels since the markup is obfuscated.
-const TOOLBAR_LABELS = /^(more|more actions|reply|reply in thread|add reaction|react|更多|回覆|新增表情符號)/i;
+// Only the hover toolbar has a "More actions" button; "Reply" / "Add reaction" also exist elsewhere on a message
+// (under it, next to reaction chips), which put the clock in the wrong place.
+const TOOLBAR_LABELS = /^(more actions|more|更多)/i;
 const labelOf = (el) => (el.getAttribute("aria-label") || el.getAttribute("data-tooltip") || "").trim();
 const buttonCount = (el) => el.querySelectorAll("button, [role='button']").length;
 
 function findToolbarAnchor(row) {
-  for (const root of [row, row.parentElement]) {
+  const roots = row.matches(SELECTORS.messageRow) ? [row] : [row, row.parentElement];
+  for (const root of roots) {
     if (!root) continue;
     let cands = [...root.querySelectorAll("button[aria-label], [role='button'][aria-label]")].filter((b) =>
       TOOLBAR_LABELS.test(labelOf(b))
