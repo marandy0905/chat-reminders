@@ -26,12 +26,15 @@
 .gcr-menu .rt-picker { margin: 6px 14px; display: flex; flex-direction: column; gap: 6px; }
 .gcr-menu .rt-picker input, .gcr-menu .rt-picker select { width: 100%; margin: 0; padding: 4px 6px; box-sizing: border-box; background: var(--gcr-bg); color: var(--gcr-fg); border: 1px solid var(--gcr-border); border-radius: 4px; font: inherit; }
 .gcr-launcher {
-  position: fixed; z-index: 2147483000; top: 10px; left: 210px; height: 40px; min-width: 40px; padding: 0 12px;
+  position: fixed; z-index: 1000; top: 10px; left: 210px; height: 40px; min-width: 40px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 20px;
   background: transparent; color: var(--gcr-muted); box-shadow: none; cursor: pointer;
   font: 600 14px/1 Roboto, Arial, sans-serif; transition: color .15s, transform .12s, background .15s;
 }
 .gcr-launcher .gcr-icon { display: flex; }
+.gcr-launcher.gcr-pill { background: var(--gcr-pill-bg, var(--gcr-hover)); color: var(--gcr-pill-fg, var(--gcr-fg)); border-radius: var(--gcr-pill-radius, 16px); box-shadow: var(--gcr-pill-shadow, none); padding: 0 18px; }
+.gcr-launcher.gcr-pill:hover { filter: none; background: var(--gcr-pill-bg, var(--gcr-hover)); color: var(--gcr-pill-fg, var(--gcr-fg)); box-shadow: 0 1px 3px rgba(0,0,0,.45), 0 4px 8px 3px rgba(0,0,0,.25); }
+.gcr-launcher.gcr-pill:hover::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: currentColor; opacity: .08; pointer-events: none; }
 .gcr-launcher:hover { background: var(--gcr-hover); color: var(--gcr-fg); }
 .gcr-launcher span:empty { display: none; }
 /* Something is due: solid red, impossible to miss. */

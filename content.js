@@ -596,10 +596,68 @@ if (window.top === window) {
     }
     return right;
   };
+  // Preferred spot: a pill right of the "New chat" button, matching its height. Found by its text; the nearest
+  // ancestor with a plausible button size is taken as the button.
+  const NEW_CHAT = /^(New chat|發起新聊天|新聊天|新对话|新對話)$/;
+  const findNewChat = () => {
+    const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) {
+      if (!NEW_CHAT.test(n.nodeValue.trim())) continue;
+      for (let el = n.parentElement, i = 0; el && i < 6; el = el.parentElement, i++) {
+        const r = el.getBoundingClientRect();
+        if (r.height >= 36 && r.height <= 72 && r.width >= 90 && r.width <= 280 && r.left < 400 && r.top < 200) return el;
+      }
+    }
+    return null;
+  };
+  // Chat popups (e.g. the New chat panel) must cover the button. Stacking order alone wasn't enough, so hide the
+  // button while something popup-like is the topmost element at its centre. pointer-events:none makes the
+  // launcher invisible to elementsFromPoint, so we see what is really underneath.
+  const POPUP = "[role='dialog'], [role='alertdialog'], [role='menu'], [role='listbox'], [aria-modal='true']";
+  const coveredByPopup = () => {
+    const r = launcher.getBoundingClientRect();
+    if (!r.width) return false;
+    launcher.style.pointerEvents = "none";
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    launcher.style.pointerEvents = "";
+    for (let el = top, i = 0; el && el !== document.body && i < 14; el = el.parentElement, i++) {
+      if (el.matches(POPUP)) return true;
+      const cs = getComputedStyle(el);
+      if ((cs.position === "fixed" || cs.position === "absolute") && parseInt(cs.zIndex, 10) >= 1000) return true;
+    }
+    return false;
+  };
+  const syncCover = () => {
+    if (!alive()) return shutdown();
+    launcher.style.visibility = coveredByPopup() ? "hidden" : "";
+  };
   const place = () => {
     if (!alive()) return shutdown();
     themed(launcher);
     refresh();
+    const ncEl = findNewChat();
+    if (ncEl) {
+      const nc = ncEl.getBoundingClientRect();
+      // Copy the look of Chat's own button (user theme colour, corner radius, shadow) from the nearest styled element.
+      let look = null;
+      for (let el = ncEl, i = 0; el && i < 4 && !look; el = el.parentElement, i++) {
+        const cs = getComputedStyle(el);
+        if (!/^rgba\(.*,\s*0\)$|^transparent$/.test(cs.backgroundColor)) look = cs;
+      }
+      launcher.classList.add("gcr-pill");
+      launcher.style.setProperty("--gcr-pill-bg", look ? look.backgroundColor : "");
+      launcher.style.setProperty("--gcr-pill-fg", look ? look.color : "");
+      launcher.style.setProperty("--gcr-pill-shadow", look ? look.boxShadow : "none");
+      launcher.style.setProperty("--gcr-pill-radius", look ? look.borderRadius : `${Math.round(nc.height / 3)}px`);
+      launcher.style.left = `${Math.round(nc.right + 10)}px`;
+      launcher.style.top = `${Math.round(nc.top)}px`;
+      launcher.style.height = `${Math.round(nc.height)}px`;
+      launcher.style.minWidth = `${Math.round(nc.height)}px`;
+      return;
+    }
+    // New chat not visible (e.g. collapsed sidebar): sit right of the header wordmark instead.
+    launcher.classList.remove("gcr-pill");
+    launcher.style.height = launcher.style.minWidth = "";
     const word = findWordmark();
     const right = Math.max(word ? word.right : 0, scanHeaderRight());
     if (right < 60 || right > 340) return; // implausible: keep the fixed fallback position from the CSS
@@ -607,6 +665,10 @@ if (window.top === window) {
     launcher.style.top = "10px";
   };
   place();
+  syncCover();
   addEventListener("resize", place);
+  document.addEventListener("click", () => setTimeout(syncCover, 120), true);
+  document.addEventListener("keyup", () => setTimeout(syncCover, 120), true);
+  setInterval(syncCover, 500);
   placeTimer = setInterval(place, 3000); // header renders late; also keeps the due state current as time passes
 }
