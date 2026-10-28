@@ -62,6 +62,8 @@
 .gcr-has-reminder {
   --gcr-tone: #0b57d0; --gcr-tone-soft: rgba(11, 87, 208, .08);
   background: var(--gcr-tone-soft);
+  /* Breathing room: space around the band, and inside it below the last bubble. */
+  margin-top: 10px !important; margin-bottom: 10px !important; padding-top: 4px !important; padding-bottom: 10px !important;
 }
 .gcr-has-reminder.gcr-reminder-dark { --gcr-tone: #6cb4ee; --gcr-tone-soft: rgba(108, 180, 238, .10); }
 .gcr-has-reminder.gcr-reminder-due { --gcr-tone: #d93025; --gcr-tone-soft: rgba(217, 48, 37, .08); }
