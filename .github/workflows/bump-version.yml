@@ -10,6 +10,7 @@ on:
       - '*.css'
       - '*.html'
       - 'icons/**'
+      - '_locales/**'
       - manifest.json
 
 permissions:
@@ -41,6 +42,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          zip -r chat-reminders.zip manifest.json ./*.js ./*.css ./*.html icons LICENSE
+          zip -r chat-reminders.zip manifest.json ./*.js ./*.css ./*.html icons _locales LICENSE
           gh release create "v$version" chat-reminders.zip --target "$(git rev-parse HEAD)" \
             --title "v$version" --generate-notes

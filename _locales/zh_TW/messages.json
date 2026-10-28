@@ -1,0 +1,11 @@
+{
+  "description": {
+    "message": "為 Google Chat 加上訊息提醒：設定提醒，時間到時顯示桌面通知。"
+  },
+  "actionTitle": {
+    "message": "提醒"
+  },
+  "commandOverview": {
+    "message": "開啟提醒總覽"
+  }
+}

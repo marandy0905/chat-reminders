@@ -80,11 +80,11 @@ chrome.alarms.onAlarm.addListener(async ({ name }) => {
   chrome.notifications.create(r.id, {
     type: "basic",
     iconUrl: "icons/icon128.png",
-    title: "Reminder",
+    title: RTime.t("notif_reminder"),
     message: r.text,
     contextMessage: "Google Chat",
     requireInteraction: true,
-    buttons: [{ title: "Snooze 20 min" }, { title: "Mark as done" }],
+    buttons: [{ title: RTime.t("btn_snooze20") }, { title: RTime.t("mark_done") }],
   });
 });
 

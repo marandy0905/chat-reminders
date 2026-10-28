@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Google Chat Reminders",
   "version": "1.0.3",
-  "description": "Reminders for Google Chat: remind yourself about a message, get a desktop notification.",
+  "description": "__MSG_description__",
   "permissions": [
     "alarms",
     "notifications",
@@ -54,16 +54,17 @@
       "suggested_key": {
         "default": "Alt+Shift+R"
       },
-      "description": "Open the reminders overview"
+      "description": "__MSG_commandOverview__"
     }
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Reminders"
+    "default_title": "__MSG_actionTitle__"
   },
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
-  }
+  },
+  "default_locale": "en"
 }

@@ -7,17 +7,17 @@
 <body>
   <header>
     <div>
-      <h1>Reminders</h1>
+      <h1 data-i18n="reminders">Reminders</h1>
       <p id="sub"></p>
     </div>
-    <a id="all" href="#">View all</a>
+    <a id="all" href="#" data-i18n="view_all">View all</a>
   </header>
   <a id="update" href="#" hidden></a>
   <ul id="list"></ul>
   <div id="empty">
     <span id="emptyIcon"></span>
-    <p><b>All caught up</b></p>
-    <p>Hover a message in Google Chat and click the clock to add a reminder.</p>
+    <p><b data-i18n="caught_up">All caught up</b></p>
+    <p data-i18n="empty_hint">Hover a message in Google Chat and click the clock to add a reminder.</p>
   </div>
   <script src="time.js"></script>
   <script src="popup.js"></script>

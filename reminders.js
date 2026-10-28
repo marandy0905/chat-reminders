@@ -4,6 +4,9 @@ const send = (msg) =>
     return r.data;
   });
 
+document.documentElement.lang = RTime.lang();
+document.querySelectorAll("[data-i18n]").forEach((n) => { n.textContent = RTime.t(n.dataset.i18n); });
+
 const DAY = 24 * 3600e3;
 
 function startOfDay(ms) {
@@ -49,7 +52,7 @@ function snoozeMenu(r, li) {
   m.appendChild(document.createElement("hr"));
   const picker = RTime.createPicker(Date.now() + 3600e3);
   m.appendChild(picker.el);
-  m.appendChild(btn("Set custom time", "go primary", () => {
+  m.appendChild(btn(RTime.t("set_custom"), "go primary", () => {
     const when = picker.get();
     if (Number.isFinite(when)) apply(when);
   }));
@@ -73,11 +76,11 @@ function row(r) {
   b.title = r.text;
   const s = document.createElement("span");
   s.textContent = r.done
-    ? `Completed ${RTime.formatWhen(r.done)}`
-    : RTime.formatWhen(r.when) + (r.source === "message" ? " · from message" : "");
+    ? RTime.t("completed_at", { when: RTime.formatWhen(r.done) })
+    : RTime.formatWhen(r.when) + (r.source === "message" ? ` · ${RTime.t("from_message")}` : "");
   t.append(b, s);
   li.appendChild(t);
-  li.title = "Open this message in Chat";
+  li.title = RTime.t("open_msg");
   li.addEventListener("click", () => send({ type: "open", id: r.id }));
 
   const withIcon = (text, name) => {
@@ -86,9 +89,9 @@ function row(r) {
     s.append(text, RTime.icon(name, 16));
     return s;
   };
-  li.appendChild(btn(r.done ? "Reactivate" : withIcon("Snooze", "caret"), "", () => snoozeMenu(r, li)));
-  if (!r.done) li.appendChild(btn(withIcon("Mark as done", "check"), "", () => send({ type: "complete", id: r.id })));
-  li.appendChild(btn(RTime.icon("close", 16), "danger icon", () => send({ type: "delete", id: r.id }), "Delete"));
+  li.appendChild(btn(r.done ? RTime.t("reactivate") : withIcon(RTime.t("snooze"), "caret"), "", () => snoozeMenu(r, li)));
+  if (!r.done) li.appendChild(btn(withIcon(RTime.t("mark_done"), "check"), "", () => send({ type: "complete", id: r.id })));
+  li.appendChild(btn(RTime.icon("close", 16), "danger icon", () => send({ type: "delete", id: r.id }), RTime.t("del")));
   return li;
 }
 
@@ -106,7 +109,7 @@ async function render() {
   for (const name of ORDER) {
     if (!groups[name]) continue;
     const h = document.createElement("h2");
-    h.textContent = `${name} (${groups[name].length})`;
+    h.textContent = `${RTime.t("sec_" + name.toLowerCase())} (${groups[name].length})`;
     if (name === "Overdue") h.className = "overdue";
     const ul = document.createElement("ul");
     groups[name].forEach((r) => ul.appendChild(row(r)));
