@@ -56,25 +56,27 @@
   margin: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer;
 }
 .gcr-inline:hover { background: rgba(128,128,128,.28); }
-/* "Reminder set for ..." above a message that has an active reminder. */
-.gcr-label {
-  display: flex; align-items: center; gap: 4px; margin: 2px 0;
-  color: var(--gcr-muted); font: 12px/16px "Google Sans", Roboto, Arial, sans-serif;
-}
-.gcr-label.gcr-label-due { color: var(--gcr-due); }
-/* Your own messages in the standard layout are right-aligned: follow them. */
-.gcr-label.gcr-label-end { justify-content: flex-end; }
-.gcr-label button {
-  padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-decoration: underline;
-}
-/* Tint the whole message that has an active reminder, like Slack's to-do highlight; red once it's due.
+/* "Reminder set for ..." pill above a message that has an active reminder. Amber while pending, red once due.
    The row is Chat's element, so its theme comes from .gcr-reminder-dark rather than .gcr-dark. */
 .gcr-has-reminder {
-  --gcr-highlight: rgba(251, 188, 4, .22); --gcr-highlight-due: rgba(234, 67, 53, .16);
-  background: var(--gcr-highlight); border-radius: 8px;
+  --gcr-tone: #b06f00; --gcr-tone-soft: rgba(251, 188, 4, .10); --gcr-tone-chip: rgba(251, 188, 4, .22);
+  background: var(--gcr-tone-soft); border-radius: 14px; box-shadow: inset 3px 0 0 var(--gcr-tone);
+  transition: background .2s, box-shadow .2s;
 }
-.gcr-has-reminder.gcr-reminder-dark { --gcr-highlight: rgba(253, 214, 99, .24); --gcr-highlight-due: rgba(242, 139, 130, .26); }
-.gcr-has-reminder.gcr-reminder-due { background: var(--gcr-highlight-due); }
+.gcr-has-reminder.gcr-reminder-dark { --gcr-tone: #fdd663; --gcr-tone-soft: rgba(253, 214, 99, .07); --gcr-tone-chip: rgba(253, 214, 99, .16); }
+.gcr-has-reminder.gcr-reminder-due { --gcr-tone: #d93025; --gcr-tone-soft: rgba(234, 67, 53, .08); --gcr-tone-chip: rgba(234, 67, 53, .18); }
+.gcr-has-reminder.gcr-reminder-dark.gcr-reminder-due { --gcr-tone: #ff8b85; --gcr-tone-soft: rgba(255, 139, 133, .08); --gcr-tone-chip: rgba(255, 139, 133, .2); }
+.gcr-label {
+  display: flex; align-items: center; gap: 5px; width: fit-content; margin: 6px 0 4px 12px; padding: 2px 10px 2px 8px;
+  border-radius: 999px; background: var(--gcr-tone-chip, rgba(128,128,128,.15)); color: var(--gcr-tone, var(--gcr-muted));
+  font: 500 12px/18px -apple-system, BlinkMacSystemFont, "SF Pro Text", "Google Sans", Roboto, Arial, sans-serif;
+}
+/* Your own messages in the standard layout are right-aligned: follow them. */
+.gcr-label.gcr-label-end { margin-left: auto; margin-right: 12px; }
+.gcr-label button {
+  padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; opacity: .85;
+}
+.gcr-label button:hover { opacity: 1; text-decoration: underline; }
 
 /* In-page reminders panel. */
 .gcr-panel {

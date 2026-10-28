@@ -495,7 +495,8 @@ function makeLabel() {
   view.textContent = "View reminders";
   view.addEventListener("click", (e) => {
     e.stopPropagation();
-    alive() ? chrome.runtime.sendMessage({ type: "popup" }) : shutdown();
+    if (!alive()) return shutdown();
+    launcherEl ? launcherEl.click() : chrome.runtime.sendMessage({ type: "popup" });
   });
   el.append(RTime.icon("clock", 14), text, document.createTextNode("·"), view);
   return el;
