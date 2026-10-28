@@ -131,6 +131,73 @@
     return 0;
   }
 
-  root.RTime = { compareVersions, icon, PRESETS, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
+  // Wording for the update flow: Traditional Chinese when the browser/system language is, otherwise English.
+  const STRINGS = {
+    en: {
+      page_title: "Update Chat Reminders",
+      versions_new: "You have v{current}. v{latest} is available.",
+      versions_none: "You have v{current}. No newer version found yet.",
+      step1_title: "Allow updating",
+      step1_desc: "Pick the folder this extension was loaded from. You only need to do this once.",
+      btn_pick: "Choose folder",
+      step2_title: "Update",
+      step2_desc: "Downloads the latest version into that folder and reloads the extension.",
+      btn_go: "Update now",
+      manual_pre: "Prefer to do it by hand?",
+      manual_link: "Download the zip",
+      manual_post: "and unzip it over your folder.",
+      wrong_folder: "That doesn't look like the Chat Reminders folder (no matching manifest.json). Pick the folder you loaded at chrome://extensions.",
+      saved: "Folder saved.",
+      folder_fail: "Couldn't use that folder: {msg}",
+      perm_denied: "Folder access was not granted.",
+      folder_changed: "The saved folder no longer looks like this extension's folder. Choose it again.",
+      downloading: "Downloading…",
+      dl_fail: "Download failed ({status}).",
+      bad_zip: "The download doesn't look like a Chat Reminders release.",
+      installing: "Installing…",
+      done: "Updated. Reloading… refresh Google Chat afterwards.",
+      banner: "Update available: v{version}. Click to update.",
+      notif_title: "Chat Reminders update available",
+      notif_msg: "Version {latest} is out (you have {current}). Click to update in one step.",
+    },
+    "zh-TW": {
+      page_title: "更新 Chat Reminders",
+      versions_new: "你目前是 v{current}，最新版本為 v{latest}。",
+      versions_none: "你目前是 v{current}，尚未發現新版本。",
+      step1_title: "允許更新",
+      step1_desc: "選擇載入此擴充功能的資料夾。只需要做一次。",
+      btn_pick: "選擇資料夾",
+      step2_title: "更新",
+      step2_desc: "把最新版本下載到該資料夾，並重新載入擴充功能。",
+      btn_go: "立即更新",
+      manual_pre: "想手動更新？",
+      manual_link: "下載 zip",
+      manual_post: "並解壓縮覆蓋原資料夾。",
+      wrong_folder: "這看起來不是 Chat Reminders 資料夾（找不到相符的 manifest.json）。請選擇你在 chrome://extensions 載入的資料夾。",
+      saved: "已儲存資料夾。",
+      folder_fail: "無法使用該資料夾：{msg}",
+      perm_denied: "未取得資料夾存取權。",
+      folder_changed: "已儲存的資料夾看起來不再是此擴充功能的資料夾，請重新選擇。",
+      downloading: "下載中…",
+      dl_fail: "下載失敗（{status}）。",
+      bad_zip: "下載的檔案看起來不是 Chat Reminders 的發行檔。",
+      installing: "安裝中…",
+      done: "更新完成，即將重新載入… 之後請重新整理 Google Chat。",
+      banner: "有新版本 v{version}，點此更新。",
+      notif_title: "Chat Reminders 有新版本",
+      notif_msg: "新版本 {latest} 已發布（目前 {current}）。點選即可一鍵更新。",
+    },
+  };
+  function lang() {
+    let l = "en";
+    try { l = chrome.i18n.getUILanguage(); } catch (_) { l = (typeof navigator !== "undefined" && navigator.language) || "en"; }
+    return /^zh[-_](tw|hk|mo|hant)/i.test(l) ? "zh-TW" : "en";
+  }
+  function t(key, vars) {
+    const s = STRINGS[lang()][key] || STRINGS.en[key] || key;
+    return s.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
+  }
+
+  root.RTime = { t, lang, compareVersions, icon, PRESETS, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);

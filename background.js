@@ -114,8 +114,8 @@ async function checkUpdate() {
       chrome.notifications.create(UPDATE_NOTE, {
         type: "basic",
         iconUrl: "icons/icon128.png",
-        title: "Chat Reminders update available",
-        message: `Version ${latest} is out (you have ${current}). Click to update in one step.`,
+        title: RTime.t("notif_title"),
+        message: RTime.t("notif_msg", { latest, current }),
       });
     }
   } catch (_) { /* offline or rate-limited: try again at the next check */ }
