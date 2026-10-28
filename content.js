@@ -10,7 +10,7 @@ const SELECTORS = {
 };
 const SNIPPET_LEN = 400;
 
-let menu, activeRow, launcherEl, placeTimer, labelObserver, labelTick;
+let menu, activeRow, launcherEl, panelEl, placeTimer, labelObserver, labelTick;
 
 // After the extension is reloaded/updated, the old content script keeps running in open tabs and every
 // chrome.* call throws "Extension context invalidated". Detect that and tear the old instance down quietly.
@@ -19,7 +19,7 @@ const alive = () => {
 };
 function shutdown() {
   clearInterval(placeTimer);
-  [menu, launcherEl].forEach((el) => el && el.remove());
+  [menu, launcherEl, panelEl].forEach((el) => el && el.remove());
   document.querySelectorAll(".gcr-inline, .gcr-label").forEach((el) => el.remove());
   document.querySelectorAll(".gcr-has-reminder").forEach((el) => el.classList.remove("gcr-has-reminder", "gcr-reminder-due", "gcr-reminder-dark"));
   labelObserver && labelObserver.disconnect();
@@ -547,9 +547,107 @@ if (window.top === window) {
   launcher.append(icon, badge);
   themed(launcher);
   launcherEl = launcher;
-  launcher.addEventListener("click", () => (alive() ? chrome.runtime.sendMessage({ type: "popup" }) : shutdown()));
+  launcher.addEventListener("click", () => (alive() ? togglePanel() : shutdown()));
   launcher.addEventListener("mouseenter", () => themed(launcher));
   document.body.appendChild(launcher);
+
+  // In-page reminders panel (rounded, themed, anchored under the launcher). Rendered by the page, so unlike the
+  // toolbar popup its corners can be styled.
+  const call = (msg) => chrome.runtime.sendMessage(msg).then((r) => {
+    if (!r || !r.ok) throw new Error((r && r.error) || "no response");
+    return r.data;
+  });
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  let panel = null;
+  const closePanel = () => {
+    if (!panel) return;
+    const p = panel;
+    panel = panelEl = null;
+    p.classList.remove("gcr-open");
+    setTimeout(() => p.remove(), 180);
+    document.removeEventListener("pointerdown", onPanelOutside, true);
+    document.removeEventListener("keydown", onPanelKey, true);
+  };
+  const onPanelOutside = (e) => { if (panel && !panel.contains(e.target) && !launcher.contains(e.target)) closePanel(); };
+  const onPanelKey = (e) => { if (e.key === "Escape") closePanel(); };
+
+  const renderPanel = async () => {
+    if (!panel || !alive()) return;
+    let items;
+    try { items = (await call({ type: "list" })).filter((r) => !r.done).sort((a, b) => a.when - b.when); } catch (_) { return; }
+    if (!panel) return;
+    const now = Date.now();
+    const dueCount = items.filter((r) => r.when <= now).length;
+    panel.querySelector(".gcr-p-sub").textContent = !items.length ? "" : dueCount ? `${dueCount} due · ${items.length} total` : `${items.length} upcoming`;
+    const list = panel.querySelector(".gcr-p-list");
+    list.replaceChildren();
+    panel.querySelector(".gcr-p-empty").style.display = items.length ? "none" : "block";
+    for (const r of items) {
+      const row = el("li", "gcr-p-row");
+      row.title = "Open this message in Chat";
+      row.addEventListener("click", () => { call({ type: "open", id: r.id }).catch(() => {}); closePanel(); });
+      const check = el("input", "gcr-p-check");
+      check.type = "checkbox";
+      check.title = "Mark as done";
+      check.setAttribute("aria-label", "Mark as done");
+      check.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "complete", id: r.id }).catch(() => {}); renderPanel(); });
+      const body = el("div", "gcr-p-body");
+      if (r.sender) body.append(el("div", "gcr-p-from", r.sender));
+      body.append(el("div", "gcr-p-text", r.text));
+      const meta = el("div", "gcr-p-meta");
+      if (r.when <= now) meta.append(el("span", "gcr-p-duepill", "Due"));
+      meta.append(el("span", null, RTime.formatWhen(r.when)));
+      body.append(meta);
+      const actions = el("div", "gcr-p-actions");
+      const snooze = el("button", "gcr-p-snooze", "Snooze 10m");
+      snooze.type = "button";
+      snooze.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "snooze", id: r.id, ms: 10 * 60e3 }).catch(() => {}); renderPanel(); });
+      const del = el("button", "gcr-p-del");
+      del.type = "button";
+      del.title = "Delete";
+      del.setAttribute("aria-label", "Delete");
+      del.appendChild(RTime.icon("close", 16));
+      del.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "delete", id: r.id }).catch(() => {}); renderPanel(); });
+      actions.append(snooze, del);
+      row.append(check, body, actions);
+      list.appendChild(row);
+    }
+  };
+
+  const openPanel = () => {
+    panel = panelEl = themed(el("div", "gcr-panel"));
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Reminders");
+    const head = el("div", "gcr-p-head");
+    const titles = el("div");
+    titles.append(el("div", "gcr-p-title", "Reminders"), el("div", "gcr-p-sub"));
+    const all = el("button", "gcr-p-all", "View all");
+    all.type = "button";
+    all.addEventListener("click", () => { call({ type: "overview" }).catch(() => {}); closePanel(); });
+    head.append(titles, all);
+    const empty = el("div", "gcr-p-empty");
+    empty.append(el("b", null, "All caught up"), el("span", null, "Hover a message and click the clock to add a reminder."));
+    panel.append(head, el("ul", "gcr-p-list"), empty);
+    const r = launcher.getBoundingClientRect();
+    const w = Math.min(420, innerWidth - 24);
+    panel.style.width = `${w}px`;
+    panel.style.left = `${Math.max(12, Math.min(r.left, innerWidth - w - 12))}px`;
+    panel.style.top = `${Math.round(r.bottom + 8)}px`;
+    panel.style.maxHeight = `${Math.max(200, innerHeight - r.bottom - 24)}px`;
+    panel.style.transformOrigin = `${Math.round(r.left + r.width / 2 - parseFloat(panel.style.left))}px top`;
+    document.body.appendChild(panel);
+    requestAnimationFrame(() => panel && panel.classList.add("gcr-open"));
+    document.addEventListener("pointerdown", onPanelOutside, true);
+    document.addEventListener("keydown", onPanelKey, true);
+    renderPanel();
+  };
+  const togglePanel = () => (panel ? closePanel() : openPanel());
+  chrome.storage.onChanged.addListener((_c, area) => area === "local" && renderPanel());
 
   // Red + count when something is due; faded otherwise (future reminders don't count).
   const refresh = () => {

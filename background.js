@@ -137,6 +137,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     snooze: () => snooze(msg.id, msg),
     complete: () => complete(msg.id),
     popup: () => openPopup(),
+    overview: () => openOverview(),
     open: async () => { const r = (await load())[msg.id]; if (r) await open(r); },
   }[msg.type];
   if (!run) return false;

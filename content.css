@@ -1,4 +1,4 @@
-.gcr-menu, .gcr-toast, .gcr-launcher, .gcr-label {
+.gcr-menu, .gcr-toast, .gcr-launcher, .gcr-label, .gcr-panel {
   --gcr-bg: #fff; --gcr-fg: #202124; --gcr-muted: #5f6368; --gcr-border: #dadce0; --gcr-hover: #f1f3f4;
   --gcr-due: #d93025;
   color-scheme: light;
@@ -64,3 +64,41 @@
 }
 .gcr-has-reminder.gcr-reminder-dark { --gcr-highlight: rgba(253, 214, 99, .24); --gcr-highlight-due: rgba(242, 139, 130, .26); }
 .gcr-has-reminder.gcr-reminder-due { background: var(--gcr-highlight-due); }
+
+/* In-page reminders panel. */
+.gcr-panel {
+  position: fixed; z-index: 2147483001; display: flex; flex-direction: column; overflow: hidden;
+  background: color-mix(in srgb, var(--gcr-bg) 88%, transparent); color: var(--gcr-fg);
+  -webkit-backdrop-filter: blur(24px) saturate(160%); backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--gcr-border); border-radius: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.2);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Google Sans", Roboto, Arial, sans-serif;
+  opacity: 0; transform: scale(.96) translateY(-6px); transition: opacity .16s ease-out, transform .2s cubic-bezier(.2,.9,.3,1);
+}
+.gcr-panel.gcr-open { opacity: 1; transform: none; }
+.gcr-p-head { display: flex; align-items: flex-end; justify-content: space-between; padding: 18px 20px 10px; }
+.gcr-p-title { font-size: 22px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
+.gcr-p-sub { margin-top: 3px; font-size: 12px; color: var(--gcr-muted); }
+.gcr-p-sub:empty { display: none; }
+.gcr-panel button { border: 0; background: none; color: var(--gcr-muted); font: inherit; cursor: pointer; border-radius: 999px; transition: background .15s, color .15s, transform .12s; }
+.gcr-panel button:hover { background: var(--gcr-hover); color: var(--gcr-fg); }
+.gcr-panel button:active { transform: scale(.94); }
+.gcr-p-all { padding: 4px 10px; font-size: 13px; font-weight: 500; color: #4c9bff !important; }
+.gcr-p-list { margin: 0; padding: 0 8px 8px; list-style: none; overflow-y: auto; overscroll-behavior: contain; }
+.gcr-p-row { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 11px 12px; border-radius: 12px; cursor: pointer; transition: background .15s; }
+.gcr-p-row:hover { background: var(--gcr-hover); }
+.gcr-p-check { flex: none; appearance: none; -webkit-appearance: none; width: 20px; height: 20px; margin: 1px 0 0; border: 1.5px solid var(--gcr-muted); border-radius: 50%; background: transparent; cursor: pointer; transition: background .15s, border-color .15s; }
+.gcr-p-check:hover { border-color: #4c9bff; }
+.gcr-p-check:checked { border-color: #4c9bff; background: #4c9bff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 12.5l4 4 8-9'/%3E%3C/svg%3E") center/13px no-repeat; }
+.gcr-p-body { flex: 1; min-width: 0; }
+.gcr-p-from { font-size: 12px; font-weight: 600; color: var(--gcr-muted); }
+.gcr-p-text { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+.gcr-p-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 12px; color: var(--gcr-muted); }
+.gcr-p-duepill { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gcr-due) 16%, transparent); color: var(--gcr-due); font-weight: 600; }
+.gcr-p-actions { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity .15s; }
+.gcr-p-row:hover .gcr-p-actions, .gcr-p-row:focus-within .gcr-p-actions { opacity: 1; }
+.gcr-p-snooze { padding: 4px 10px; font-size: 12px; font-weight: 500; }
+.gcr-p-del { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; }
+.gcr-p-del:hover { color: var(--gcr-due) !important; }
+.gcr-p-empty { display: none; padding: 28px 24px 32px; text-align: center; font-size: 13px; color: var(--gcr-muted); }
+.gcr-p-empty b { display: block; margin-bottom: 4px; font-size: 17px; font-weight: 600; color: var(--gcr-fg); }
+@media (prefers-reduced-motion: reduce) { .gcr-panel, .gcr-panel * { transition: opacity .1s !important; transform: none !important; } }
