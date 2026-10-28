@@ -168,12 +168,24 @@ chrome.notifications.onClicked.addListener(async (id) => {
   await chrome.notifications.clear(id);
 });
 
+// Opened as a small focused window instead of a background tab: it comes to the front on top of Chat (including
+// when Chat runs as an installed app window) and the user can't miss it. It has to be an extension page, not
+// something injected into Chat, because the folder picker isn't allowed in cross-origin frames.
 async function openUpdate() {
   const url = chrome.runtime.getURL("update.html");
   const [tab] = await chrome.tabs.query({ url });
-  if (!tab) return chrome.tabs.create({ url });
-  await chrome.windows.update(tab.windowId, { focused: true });
-  await chrome.tabs.update(tab.id, { active: true });
+  if (tab) {
+    await chrome.windows.update(tab.windowId, { focused: true, drawAttention: true });
+    return chrome.tabs.update(tab.id, { active: true });
+  }
+  const width = 600, height = 620;
+  let left, top;
+  try {
+    const w = await chrome.windows.getLastFocused();
+    left = Math.max(0, Math.round((w.left || 0) + ((w.width || width) - width) / 2));
+    top = Math.max(0, Math.round((w.top || 0) + ((w.height || height) - height) / 3));
+  } catch (_) { /* let Chrome place it */ }
+  return chrome.windows.create({ url, type: "popup", width, height, left, top, focused: true });
 }
 
 async function openOverview() {
