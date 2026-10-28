@@ -621,6 +621,28 @@ if (window.top === window) {
 
   const openPanel = () => {
     panel = panelEl = themed(el("div", "gcr-panel"));
+    // Follow the user's Chat theme: take the page surface and text colours, and New chat's fill for hover/accents.
+    const solid = (n) => {
+      for (; n; n = n.parentElement) {
+        const c = getComputedStyle(n).backgroundColor;
+        if (!/^rgba\(.*,\s*0\)$|^transparent$/.test(c)) return c;
+      }
+      return "";
+    };
+    const lr = launcher.getBoundingClientRect();
+    launcher.style.pointerEvents = "none";
+    const under = document.elementFromPoint(Math.max(2, lr.left - 40), Math.min(innerHeight - 2, lr.bottom + 40)) || document.body;
+    launcher.style.pointerEvents = "";
+    const pageBg = solid(under) || solid(document.body);
+    const pageFg = getComputedStyle(under).color;
+    const fill = launcher.style.getPropertyValue("--gcr-pill-bg");
+    if (pageBg) panel.style.setProperty("--gcr-bg", pageBg);
+    if (pageFg) {
+      panel.style.setProperty("--gcr-fg", pageFg);
+      panel.style.setProperty("--gcr-muted", `color-mix(in srgb, ${pageFg} 62%, transparent)`);
+      panel.style.setProperty("--gcr-border", `color-mix(in srgb, ${pageFg} 16%, transparent)`);
+    }
+    if (fill) panel.style.setProperty("--gcr-hover", fill);
     panel.setAttribute("role", "dialog");
     panel.setAttribute("aria-label", "Reminders");
     const head = el("div", "gcr-p-head");
