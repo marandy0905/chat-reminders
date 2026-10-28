@@ -1,0 +1,33 @@
+name: Bump version
+
+# Every push to main (i.e. every merge) bumps the patch version in manifest.json, so unpacked installs
+# (git clone + chrome://extensions) see a newer version and notify their users.
+on:
+  push:
+    branches: [main]
+    paths-ignore: [manifest.json]
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    # The bump commit touches only manifest.json (ignored above) and is pushed with GITHUB_TOKEN,
+    # which doesn't trigger workflows, so this can't loop.
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump patch version
+        run: |
+          current=$(jq -r .version manifest.json)
+          next=$(echo "$current" | awk -F. '{ printf "%d.%d.%d", $1, $2, $3 + 1 }')
+          jq --arg v "$next" '.version = $v' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          echo "Bumped $current -> $next"
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          git commit -m "chore: bump version [skip ci]"
+          git push
