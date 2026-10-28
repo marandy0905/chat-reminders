@@ -89,7 +89,7 @@ chrome.alarms.onAlarm.addListener(async ({ name }) => {
 });
 
 // Update check for unpacked (git clone) installs, which Chrome never updates by itself: once a day, compare our
-// manifest version with the one on the repo's main branch and tell the user to download the new release zip.
+// manifest version with the one on the repo's main branch and offer a one-click update (update.html).
 const REPO_URL = "https://github.com/marandy0905/chat-reminders";
 const REMOTE_MANIFEST = "https://raw.githubusercontent.com/marandy0905/chat-reminders/main/manifest.json";
 const UPDATE_ALARM = "gcr-update-check";
@@ -115,7 +115,7 @@ async function checkUpdate() {
         type: "basic",
         iconUrl: "icons/icon128.png",
         title: "Chat Reminders update available",
-        message: `Version ${latest} is out (you have ${current}). Click to download it, unzip it over your current folder, then reload the extension at chrome://extensions.`,
+        message: `Version ${latest} is out (you have ${current}). Click to update in one step.`,
       });
     }
   } catch (_) { /* offline or rate-limited: try again at the next check */ }
@@ -151,13 +151,21 @@ chrome.notifications.onButtonClicked.addListener(async (id, idx) => {
 
 chrome.notifications.onClicked.addListener(async (id) => {
   if (id === UPDATE_NOTE) {
-    await chrome.tabs.create({ url: `${REPO_URL}/releases/latest` });
+    await openUpdate();
     return chrome.notifications.clear(id);
   }
   const r = (await load())[id];
   if (r) await open(r);
   await chrome.notifications.clear(id);
 });
+
+async function openUpdate() {
+  const url = chrome.runtime.getURL("update.html");
+  const [tab] = await chrome.tabs.query({ url });
+  if (!tab) return chrome.tabs.create({ url });
+  await chrome.windows.update(tab.windowId, { focused: true });
+  await chrome.tabs.update(tab.id, { active: true });
+}
 
 async function openOverview() {
   const url = chrome.runtime.getURL("reminders.html");
@@ -181,6 +189,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     complete: () => complete(msg.id),
     popup: () => openPopup(),
     overview: () => openOverview(),
+    openUpdate: () => openUpdate(),
     updateInfo: async () => (await chrome.storage.local.get("update")).update || null,
     open: async () => { const r = (await load())[msg.id]; if (r) await open(r); },
   }[msg.type];

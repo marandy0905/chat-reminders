@@ -76,9 +76,9 @@ async function render() {
 chrome.storage.local.get("update").then(({ update }) => {
   if (!update) return;
   const a = $("update");
-  a.textContent = `Update available: v${update.version}. Click to download, unzip over your folder, then reload.`;
+  a.textContent = `Update available: v${update.version}. Click to update.`;
   a.hidden = false;
-  a.addEventListener("click", (e) => { e.preventDefault(); chrome.tabs.create({ url: "https://github.com/marandy0905/chat-reminders/releases/latest" }); });
+  a.addEventListener("click", (e) => { e.preventDefault(); send({ type: "openUpdate" }); });
 });
 
 $("emptyIcon").appendChild(RTime.icon("check", 40));
