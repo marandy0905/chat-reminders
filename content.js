@@ -695,8 +695,10 @@ if (window.top === window) {
     note.hidden = true;
     call({ type: "updateInfo" }).then((u) => {
       if (!u || !panel) return;
-      note.textContent = `Update available: v${u.version}. Run git pull, then reload the extension.`;
+      note.textContent = `Update available: v${u.version}. Click to download, unzip over your folder, then reload.`;
       note.hidden = false;
+      note.style.cursor = "pointer";
+      note.addEventListener("click", () => window.open("https://github.com/marandy0905/chat-reminders/releases/latest", "_blank", "noopener"));
     }).catch(() => {});
     panel.append(head, note, el("ul", "gcr-p-list"), empty);
     const r = launcher.getBoundingClientRect();

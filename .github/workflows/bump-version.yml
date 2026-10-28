@@ -1,7 +1,7 @@
 name: Bump version
 
 # Every merge to main that changes extension code (not docs, tests or workflows) bumps the patch version in manifest.json, so unpacked installs
-# (git clone + chrome://extensions) see a newer version and notify their users.
+# (chrome://extensions) see a newer version and notify their users, and publishes a release with the install zip.
 on:
   push:
     branches: [main]
@@ -29,6 +29,7 @@ jobs:
           next=$(echo "$current" | awk -F. '{ printf "%d.%d.%d", $1, $2, $3 + 1 }')
           jq --arg v "$next" '.version = $v' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
           echo "Bumped $current -> $next"
+          echo "version=$next" >> "$GITHUB_ENV"
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
@@ -36,3 +37,10 @@ jobs:
           git add manifest.json
           git commit -m "chore: bump version [skip ci]"
           git push
+      - name: Publish release zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          zip -r chat-reminders.zip manifest.json ./*.js ./*.css ./*.html icons LICENSE
+          gh release create "v$version" chat-reminders.zip --target "$(git rev-parse HEAD)" \
+            --title "v$version" --generate-notes
