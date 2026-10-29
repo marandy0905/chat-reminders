@@ -10,6 +10,8 @@ const SELECTORS = {
 };
 const SNIPPET_LEN = 400;
 
+// Quick options for the menu (user-editable on the options page), kept in sync with storage.
+let presets = RTime.buildPresets();
 let menu, activeRow, launcherEl, panelEl, placeTimer, labelObserver, labelTick;
 
 // After the extension is reloaded/updated, the old content script keeps running in open tabs and every
@@ -295,7 +297,7 @@ function openMenu(row, anchor) {
     });
     menu.appendChild(b);
   };
-  RTime.PRESETS.forEach((p) => {
+  presets.forEach((p) => {
     const at = p.at(Date.now());
     item(p.label, () => remindAt(row, at), /\d:\d/.test(p.label) ? "" : RTime.formatTime(at));
   });
@@ -319,6 +321,18 @@ function openMenu(row, anchor) {
     remindAt(row, when);
   });
   menu.append(picker.el, go);
+  const sep2 = document.createElement("div");
+  sep2.className = "gcr-menu-sep";
+  const custom = document.createElement("button");
+  custom.type = "button";
+  custom.className = "gcr-menu-link";
+  custom.textContent = RTime.t("menu_customize");
+  custom.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeMenu();
+    send({ type: "options" }).catch(() => {});
+  });
+  menu.append(sep2, custom);
 
   const r = anchor.getBoundingClientRect();
   const M = 8; // margin kept to the viewport edges
@@ -585,6 +599,10 @@ function loadLabels() {
     scheduleLabels();
   }).catch(() => {});
 }
+
+const loadPresetList = () => alive() && RTime.loadPresets().then((p) => { presets = p; }).catch(() => {});
+loadPresetList();
+chrome.storage.onChanged.addListener((_c, area) => area === "local" && loadPresetList());
 
 loadLabels();
 chrome.storage.onChanged.addListener((_c, area) => area === "local" && loadLabels());

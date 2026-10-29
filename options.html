@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title data-i18n="opt_title">Reminder options</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1 data-i18n="opt_title">Reminder options</h1>
+    <p id="desc" data-i18n="opt_desc"></p>
+    <ul id="list"></ul>
+    <p id="note" role="status"></p>
+    <div id="actions">
+      <button id="addIn" type="button" data-i18n="opt_add_in"></button>
+      <button id="addTmr" type="button" data-i18n="opt_add_tmr"></button>
+      <span class="grow"></span>
+      <button id="reset" type="button" class="quiet" data-i18n="opt_reset"></button>
+    </div>
+    <p id="saved" aria-live="polite"></p>
+  </main>
+  <script src="time.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
