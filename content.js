@@ -592,6 +592,26 @@ labelTick = setInterval(loadLabels, 60 * 1000);
 labelObserver = new MutationObserver(() => Object.keys(labels).length && scheduleLabels());
 labelObserver.observe(document.body, { childList: true, subtree: true });
 
+// The background asks us to open a message link the way Chat's own links work: clicking a real <a> lets Chat's
+// router handle it in-app (no page reload). If Chat doesn't intercept it, the browser follows it normally.
+if (window.top === window) {
+  chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
+    if (!msg || msg.type !== "gcr-navigate" || !alive()) return false;
+    try {
+      const a = document.createElement("a");
+      a.href = msg.url;
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      reply({ ok: true });
+    } catch (_) {
+      reply({ ok: false });
+    }
+    return false;
+  });
+}
+
 // Launcher: small button (top frame only) that opens the reminders overview, with a count of active reminders.
 if (window.top === window) {
   const launcher = document.createElement("button");
