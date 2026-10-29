@@ -25,6 +25,21 @@
 .gcr-menu .gcr-menu-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 8px 10px; border-radius: 10px; text-align: left; }
 .gcr-menu .gcr-menu-item:hover { background: var(--gcr-hover); }
 .gcr-menu .gcr-menu-item:active { transform: scale(.98); }
+.gcr-menu-head { display: flex; align-items: center; justify-content: space-between; }
+.gcr-menu .gcr-menu-edit { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; color: #4c9bff; }
+.gcr-menu .gcr-menu-edit:hover { background: var(--gcr-hover); }
+.gcr-menu-row { display: flex; align-items: center; gap: 6px; padding: 3px 10px; }
+.gcr-menu-rowlabel { flex: 1; font-size: 13px; color: var(--gcr-muted); }
+.gcr-menu-row input, .gcr-menu-row select { min-width: 0; padding: 6px 8px; box-sizing: border-box; background: var(--gcr-hover); color: var(--gcr-fg); border: 1px solid transparent; border-radius: 10px; font: inherit; font-size: 13px; outline: none; }
+.gcr-menu-row input[type=number] { width: 64px; }
+.gcr-menu-row input[type=time] { width: 112px; }
+.gcr-menu-row select { flex: 1; }
+.gcr-menu-row input:focus, .gcr-menu-row select:focus { border-color: #4c9bff; }
+.gcr-menu .gcr-menu-x { display: flex; align-items: center; justify-content: center; flex: none; width: 26px; height: 26px; padding: 0; border-radius: 50%; color: var(--gcr-muted); }
+.gcr-menu .gcr-menu-x:hover { background: var(--gcr-hover); color: var(--gcr-due, #d93025); }
+.gcr-menu .gcr-menu-link:disabled { opacity: .4; cursor: default; }
+.gcr-menu .gcr-menu-link { display: block; width: 100%; padding: 6px 10px; border-radius: 10px; text-align: left; font-size: 12px; color: var(--gcr-muted); }
+.gcr-menu .gcr-menu-link:hover { background: var(--gcr-hover); color: var(--gcr-fg); }
 .gcr-menu-hint { font-size: 12px; color: var(--gcr-muted); }
 .gcr-menu .gcr-menu-primary { display: block; width: calc(100% - 20px); margin: 6px 10px 4px; padding: 8px 12px; border-radius: 10px; background: #0a66e6; color: #fff; font-weight: 600; text-align: center; }
 .gcr-dark .gcr-menu-primary, .gcr-menu.gcr-dark .gcr-menu-primary { background: #4c9bff; color: #0b1b33; }

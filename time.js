@@ -2,21 +2,55 @@
 (function (root) {
   const MIN = 60 * 1000;
 
-  // Presets used by the hover menu and popup chips. Each returns an epoch ms.
-  const PRESETS = [
-    { key: "preset_20m", at: (now) => now + 20 * MIN },
-    { key: "preset_1h", at: (now) => now + 60 * MIN },
-    { key: "preset_2h", at: (now) => now + 120 * MIN },
-    { key: "preset_3h", at: (now) => now + 180 * MIN },
-    { key: "preset_tmr", at: (now) => tomorrowAt(now, 10) },
+  // Quick options shown in the reminder menu and the snooze menu. Users edit them in the reminder menu itself; they are
+  // stored as data: { kind: "in", minutes } or { kind: "tomorrow", time: "HH:MM" }.
+  const DEFAULT_PRESETS = [
+    { kind: "in", minutes: 20 },
+    { kind: "in", minutes: 60 },
+    { kind: "in", minutes: 120 },
+    { kind: "in", minutes: 180 },
+    { kind: "tomorrow", time: "10:00" },
   ];
-  // Labels follow the current language.
-  PRESETS.forEach((p) => Object.defineProperty(p, "label", { get: () => t(p.key), enumerable: true }));
+  const MAX_PRESETS = 8;
+  const MAX_MINUTES = 30 * 24 * 60;
 
-  function tomorrowAt(now, hour) {
+  // Validate and normalise stored options: drop junk, clamp, cap the count, "from now" ascending then "tomorrow" ascending.
+  // Anything that isn't a list falls back to the defaults; an empty list is allowed (only "Custom time" is shown).
+  function sanitizePresets(list) {
+    if (!Array.isArray(list)) return DEFAULT_PRESETS.map((p) => ({ ...p }));
+    const ins = [], tmr = [];
+    for (const o of list) {
+      if (o && o.kind === "tomorrow" && /^([01]\d|2[0-3]):[0-5]\d$/.test(o.time)) tmr.push({ kind: "tomorrow", time: o.time });
+      else if (o && o.kind === "in" && Number.isFinite(+o.minutes)) ins.push({ kind: "in", minutes: Math.min(MAX_MINUTES, Math.max(1, Math.round(+o.minutes))) });
+    }
+    ins.sort((x, y) => x.minutes - y.minutes);
+    tmr.sort((x, y) => (x.time < y.time ? -1 : 1));
+    return [...ins, ...tmr].slice(0, MAX_PRESETS);
+  }
+
+  function durationLabel(min) {
+    if (min % 1440 === 0) return t(min / 1440 === 1 ? "in_day_one" : "in_day_other", { n: min / 1440 });
+    if (min % 60 === 0) return t(min / 60 === 1 ? "in_hr_one" : "in_hr_other", { n: min / 60 });
+    return t(min === 1 ? "in_min_one" : "in_min_other", { n: min });
+  }
+
+  // [{ label, at(now) -> epoch ms }]; labels follow the current language.
+  function buildPresets(list) {
+    return sanitizePresets(list).map((o) => {
+      if (o.kind === "tomorrow") {
+        const [h, m] = o.time.split(":").map(Number);
+        return { label: t("tomorrow_at", { time: o.time }), at: (now) => tomorrowAt(now, h, m) };
+      }
+      return { label: durationLabel(o.minutes), at: (now) => now + o.minutes * MIN };
+    });
+  }
+
+  const loadPresets = () => chrome.storage.local.get("presets").then((o) => buildPresets(o.presets));
+
+  function tomorrowAt(now, hour, minute = 0) {
     const d = new Date(now);
     d.setDate(d.getDate() + 1);
-    d.setHours(hour, 0, 0, 0);
+    d.setHours(hour, minute, 0, 0);
     return d.getTime();
   }
 
@@ -167,11 +201,6 @@
       msg_fallback: "Message in Google Chat",
       notif_reminder: "Reminder",
       btn_snooze20: "Snooze 20 min",
-      preset_20m: "In 20 minutes",
-      preset_1h: "In 1 hour",
-      preset_2h: "In 2 hours",
-      preset_3h: "In 3 hours",
-      preset_tmr: "Tomorrow 10:00",
       ov_title: "Reminders",
       ov_empty: "No reminders yet. Hover a message in Google Chat and click the clock button, or use the toolbar popup.",
       sec_overdue: "Overdue",
@@ -184,6 +213,24 @@
       reactivate: "Reactivate",
       snooze: "Snooze",
       set_custom: "Set custom time",
+      in_min_one: "In {n} minute",
+      in_min_other: "In {n} minutes",
+      in_hr_one: "In {n} hour",
+      in_hr_other: "In {n} hours",
+      in_day_one: "In {n} day",
+      in_day_other: "In {n} days",
+      tomorrow_at: "Tomorrow {time}",
+      edit: "Edit",
+      done: "Done",
+      opt_from_now: "From now",
+      opt_tomorrow: "Tomorrow at",
+      unit_min: "minutes",
+      unit_hr: "hours",
+      unit_day: "days",
+      opt_add_in: "Add a time from now",
+      opt_add_tmr: "Add a time tomorrow",
+      opt_reset: "Reset to defaults",
+      opt_max: "You can have up to {n} options.",
       page_title: "Update Chat Reminders",
       versions_new: "You have v{current}. v{latest} is available.",
       versions_none: "You have v{current}. No newer version found yet.",
@@ -242,11 +289,6 @@
       msg_fallback: "Google Chat 訊息",
       notif_reminder: "提醒",
       btn_snooze20: "延後 20 分鐘",
-      preset_20m: "20 分鐘後",
-      preset_1h: "1 小時後",
-      preset_2h: "2 小時後",
-      preset_3h: "3 小時後",
-      preset_tmr: "明天 10:00",
       ov_title: "提醒",
       ov_empty: "還沒有提醒。將滑鼠移到 Google Chat 的訊息上並點選時鐘按鈕，或使用工具列的彈出視窗。",
       sec_overdue: "已逾期",
@@ -259,6 +301,24 @@
       reactivate: "重新啟用",
       snooze: "延後",
       set_custom: "設定自訂時間",
+      in_min_one: "{n} 分鐘後",
+      in_min_other: "{n} 分鐘後",
+      in_hr_one: "{n} 小時後",
+      in_hr_other: "{n} 小時後",
+      in_day_one: "{n} 天後",
+      in_day_other: "{n} 天後",
+      tomorrow_at: "明天 {time}",
+      edit: "編輯",
+      done: "完成",
+      opt_from_now: "從現在起",
+      opt_tomorrow: "明天",
+      unit_min: "分鐘",
+      unit_hr: "小時",
+      unit_day: "天",
+      opt_add_in: "新增「多久之後」",
+      opt_add_tmr: "新增「明天的時間」",
+      opt_reset: "還原預設值",
+      opt_max: "最多只能有 {n} 個選項。",
       page_title: "更新 Chat Reminders",
       versions_new: "你目前是 v{current}，最新版本為 v{latest}。",
       versions_none: "你目前是 v{current}，尚未發現新版本。",
@@ -299,6 +359,6 @@
     return s.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
   }
 
-  root.RTime = { t, lang, setLang, compareVersions, icon, PRESETS, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
+  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);

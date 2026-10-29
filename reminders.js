@@ -42,13 +42,14 @@ function btn(label, cls, fn, title) {
   return b;
 }
 
-function snoozeMenu(r, li) {
+async function snoozeMenu(r, li) {
   closeMenu();
+  const presets = await RTime.loadPresets();
   const m = document.createElement("div");
   m.className = "menu";
   m.addEventListener("click", (e) => e.stopPropagation());
   const apply = (when) => { closeMenu(); send({ type: "snooze", id: r.id, when }); };
-  RTime.PRESETS.forEach((p) => m.appendChild(btn(p.label, "", () => apply(p.at(Date.now())))));
+  presets.forEach((p) => m.appendChild(btn(p.label, "", () => apply(p.at(Date.now())))));
   m.appendChild(document.createElement("hr"));
   const picker = RTime.createPicker(Date.now() + 3600e3);
   m.appendChild(picker.el);

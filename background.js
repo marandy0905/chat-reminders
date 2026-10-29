@@ -148,7 +148,16 @@ async function open(r) {
   const tab = tabs[i];
   const sameOrigin = new URL(r.url).origin === new URL(tab.url).origin;
   await chrome.windows.update(tab.windowId, { focused: true, state: wins[i].state === "minimized" ? "normal" : undefined });
-  await chrome.tabs.update(tab.id, { active: true, ...(sameOrigin && r.url !== FALLBACK_URL ? { url: r.url } : {}) });
+  await chrome.tabs.update(tab.id, { active: true });
+  if (!sameOrigin || r.url === FALLBACK_URL) return;
+  // Ask the page to follow the link itself, like clicking a message link inside Chat: Chat's router then jumps to
+  // the message without reloading. If the page can't (old content script, no response), navigate the tab instead.
+  try {
+    const res = await chrome.tabs.sendMessage(tab.id, { type: "gcr-navigate", url: r.url }, { frameId: 0 });
+    if (!res || !res.ok) throw new Error("not handled");
+  } catch (_) {
+    await chrome.tabs.update(tab.id, { url: r.url });
+  }
 }
 
 // Nothing here marks a reminder done except the explicit "Mark as done" button:
