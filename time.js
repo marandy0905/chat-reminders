@@ -2,7 +2,7 @@
 (function (root) {
   const MIN = 60 * 1000;
 
-  // Quick options shown in the reminder menu and the snooze menu. Users can edit them on the options page; they are
+  // Quick options shown in the reminder menu and the snooze menu. Users edit them in the reminder menu itself; they are
   // stored as data: { kind: "in", minutes } or { kind: "tomorrow", time: "HH:MM" }.
   const DEFAULT_PRESETS = [
     { kind: "in", minutes: 20 },
@@ -220,8 +220,8 @@
       in_day_one: "In {n} day",
       in_day_other: "In {n} days",
       tomorrow_at: "Tomorrow {time}",
-      opt_title: "Reminder options",
-      opt_desc: "Choose the quick options shown when you set a reminder or snooze one. “Custom time” is always available.",
+      edit: "Edit",
+      done: "Done",
       opt_from_now: "From now",
       opt_tomorrow: "Tomorrow at",
       unit_min: "minutes",
@@ -230,10 +230,7 @@
       opt_add_in: "Add a time from now",
       opt_add_tmr: "Add a time tomorrow",
       opt_reset: "Reset to defaults",
-      opt_saved: "Saved",
       opt_max: "You can have up to {n} options.",
-      opt_empty: "No quick options. Only “Custom time” will be shown.",
-      menu_customize: "Customize options…",
       page_title: "Update Chat Reminders",
       versions_new: "You have v{current}. v{latest} is available.",
       versions_none: "You have v{current}. No newer version found yet.",
@@ -311,8 +308,8 @@
       in_day_one: "{n} 天後",
       in_day_other: "{n} 天後",
       tomorrow_at: "明天 {time}",
-      opt_title: "提醒選項",
-      opt_desc: "選擇設定提醒或延後提醒時顯示的快速選項。「自訂時間」一律可用。",
+      edit: "編輯",
+      done: "完成",
       opt_from_now: "從現在起",
       opt_tomorrow: "明天",
       unit_min: "分鐘",
@@ -321,10 +318,7 @@
       opt_add_in: "新增「多久之後」",
       opt_add_tmr: "新增「明天的時間」",
       opt_reset: "還原預設值",
-      opt_saved: "已儲存",
       opt_max: "最多只能有 {n} 個選項。",
-      opt_empty: "沒有快速選項，只會顯示「自訂時間」。",
-      menu_customize: "自訂選項…",
       page_title: "更新 Chat Reminders",
       versions_new: "你目前是 v{current}，最新版本為 v{latest}。",
       versions_none: "你目前是 v{current}，尚未發現新版本。",

@@ -66,9 +66,5 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "default_locale": "en",
-  "options_ui": {
-    "page": "options.html",
-    "open_in_tab": true
-  }
+  "default_locale": "en"
 }

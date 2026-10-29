@@ -219,7 +219,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     complete: () => complete(msg.id),
     popup: () => openPopup(),
     overview: () => openOverview(),
-    options: () => chrome.runtime.openOptionsPage(),
     openUpdate: () => openUpdate(),
     updateInfo: async () => {
       const { update } = await chrome.storage.local.get("update");

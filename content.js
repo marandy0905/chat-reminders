@@ -11,7 +11,8 @@ const SELECTORS = {
 const SNIPPET_LEN = 400;
 
 // Quick options for the menu (user-editable on the options page), kept in sync with storage.
-let presets = RTime.buildPresets();
+let presetData = RTime.sanitizePresets();
+let presets = RTime.buildPresets(presetData);
 let menu, activeRow, launcherEl, panelEl, placeTimer, labelObserver, labelTick;
 
 // After the extension is reloaded/updated, the old content script keeps running in open tabs and every
@@ -269,91 +270,148 @@ function closeMenu() {
   menu = null;
 }
 
+function savePresets(list) {
+  presetData = RTime.sanitizePresets(list);
+  presets = RTime.buildPresets(presetData);
+  if (alive()) chrome.storage.local.set({ presets: presetData }).catch(() => {});
+}
+
 function openMenu(row, anchor) {
   closeMenu();
   menu = document.createElement("div");
   menu.className = "gcr-menu";
   chatTheme(menu);
-  const head = document.createElement("div");
-  head.className = "gcr-menu-head";
-  head.textContent = RTime.t("remind_me");
-  menu.appendChild(head);
-
-  const item = (label, fn, hint) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "gcr-menu-item";
-    b.append(label);
-    if (hint) {
-      const h = document.createElement("span");
-      h.className = "gcr-menu-hint";
-      h.textContent = hint;
-      b.appendChild(h);
-    }
-    b.addEventListener("click", (e) => {
-      e.stopPropagation();
-      closeMenu();
-      fn();
-    });
-    menu.appendChild(b);
+  // Typing in the menu's fields must not trigger Chat's keyboard shortcuts.
+  menu.addEventListener("keydown", (e) => e.stopPropagation());
+  menu.addEventListener("keyup", (e) => e.stopPropagation());
+  const mk = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    if (tag === "button") n.type = "button";
+    return n;
   };
-  presets.forEach((p) => {
-    const at = p.at(Date.now());
-    item(p.label, () => remindAt(row, at), /\d:\d/.test(p.label) ? "" : RTime.formatTime(at));
-  });
-  const sep = document.createElement("div");
-  sep.className = "gcr-menu-sep";
-  const customHead = document.createElement("div");
-  customHead.className = "gcr-menu-sub";
-  customHead.textContent = RTime.t("custom_time");
-  menu.append(sep, customHead);
 
-  const picker = RTime.createPicker(Date.now() + 3600e3);
-  const go = document.createElement("button");
-  go.type = "button";
-  go.className = "gcr-menu-primary";
-  go.textContent = RTime.t("set_reminder");
-  go.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const when = picker.get();
-    if (!Number.isFinite(when)) return;
-    closeMenu();
-    remindAt(row, when);
-  });
-  menu.append(picker.el, go);
-  const sep2 = document.createElement("div");
-  sep2.className = "gcr-menu-sep";
-  const custom = document.createElement("button");
-  custom.type = "button";
-  custom.className = "gcr-menu-link";
-  custom.textContent = RTime.t("menu_customize");
-  custom.addEventListener("click", (e) => {
-    e.stopPropagation();
-    closeMenu();
-    send({ type: "options" }).catch(() => {});
-  });
-  menu.append(sep2, custom);
+  const head = mk("div", "gcr-menu-head");
+  const title = mk("span", null, RTime.t("remind_me"));
+  const toggle = mk("button", "gcr-menu-edit", RTime.t("edit"));
+  head.append(title, toggle);
+  const body = mk("div", "gcr-menu-body");
+  menu.append(head, body);
+  let editing = false;
+
+  const unitFor = (min) => (min % 1440 === 0 ? 1440 : min % 60 === 0 ? 60 : 1);
+
+  // Normal mode: the quick options, then a custom date/time.
+  const renderList = () => {
+    presets.forEach((p) => {
+      const at = p.at(Date.now());
+      const b = mk("button", "gcr-menu-item", p.label);
+      if (!/\d:\d/.test(p.label)) b.appendChild(mk("span", "gcr-menu-hint", RTime.formatTime(at)));
+      b.addEventListener("click", (e) => { e.stopPropagation(); closeMenu(); remindAt(row, at); });
+      body.appendChild(b);
+    });
+    body.append(mk("div", "gcr-menu-sep"), mk("div", "gcr-menu-sub", RTime.t("custom_time")));
+    const picker = RTime.createPicker(Date.now() + 3600e3);
+    const go = mk("button", "gcr-menu-primary", RTime.t("set_reminder"));
+    go.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const when = picker.get();
+      if (!Number.isFinite(when)) return;
+      closeMenu();
+      remindAt(row, when);
+    });
+    body.append(picker.el, go);
+  };
+
+  // Edit mode: the same list, editable in place. Every change is saved straight away.
+  const renderEdit = () => {
+    presetData.forEach((o, i) => {
+      const li = mk("div", "gcr-menu-row");
+      if (o.kind === "tomorrow") {
+        const time = mk("input");
+        time.type = "time";
+        time.value = o.time;
+        time.addEventListener("change", () => { if (time.value) { const l = presetData.slice(); l[i] = { kind: "tomorrow", time: time.value }; savePresets(l); render(); } });
+        li.append(mk("span", "gcr-menu-rowlabel", RTime.t("opt_tomorrow")), time);
+      } else {
+        const unit = unitFor(o.minutes);
+        const num = mk("input");
+        num.type = "number";
+        num.min = "1";
+        num.step = "1";
+        num.value = String(o.minutes / unit);
+        const sel = mk("select");
+        for (const [key, mult] of [["unit_min", 1], ["unit_hr", 60], ["unit_day", 1440]]) {
+          const opt = mk("option", null, RTime.t(key));
+          opt.value = String(mult);
+          opt.selected = mult === unit;
+          sel.appendChild(opt);
+        }
+        const commit = () => {
+          const n = parseFloat(num.value);
+          if (n > 0) { const l = presetData.slice(); l[i] = { kind: "in", minutes: Math.round(n * +sel.value) }; savePresets(l); }
+          render();
+        };
+        num.addEventListener("change", commit);
+        sel.addEventListener("change", commit);
+        li.append(num, sel);
+      }
+      const x = mk("button", "gcr-menu-x");
+      x.title = RTime.t("remove");
+      x.setAttribute("aria-label", RTime.t("remove"));
+      x.appendChild(RTime.icon("close", 14));
+      x.addEventListener("click", (e) => { e.stopPropagation(); savePresets(presetData.filter((_, j) => j !== i)); render(); });
+      li.appendChild(x);
+      body.appendChild(li);
+    });
+    const full = presetData.length >= RTime.MAX_PRESETS;
+    const addIn = mk("button", "gcr-menu-link", "+ " + RTime.t("opt_add_in"));
+    const addTmr = mk("button", "gcr-menu-link", "+ " + RTime.t("opt_add_tmr"));
+    addIn.disabled = addTmr.disabled = full;
+    addIn.addEventListener("click", (e) => { e.stopPropagation(); savePresets([...presetData, { kind: "in", minutes: 30 }]); render(); });
+    addTmr.addEventListener("click", (e) => { e.stopPropagation(); savePresets([...presetData, { kind: "tomorrow", time: "09:00" }]); render(); });
+    const reset = mk("button", "gcr-menu-link", RTime.t("opt_reset"));
+    reset.addEventListener("click", (e) => { e.stopPropagation(); savePresets(RTime.DEFAULT_PRESETS); render(); });
+    body.append(mk("div", "gcr-menu-sep"), addIn, addTmr, mk("div", "gcr-menu-sep"), reset);
+    if (full) body.appendChild(mk("div", "gcr-menu-sub", RTime.t("opt_max", { n: RTime.MAX_PRESETS })));
+  };
 
   const r = anchor.getBoundingClientRect();
   const M = 8; // margin kept to the viewport edges
-  menu.style.visibility = "hidden";
-  document.body.appendChild(menu);
-
   // Fit the whole menu on screen: open below the button if it fits, else above, else take the larger side and
-  // scroll inside the menu. Re-measured after the content is in the DOM.
-  const full = menu.scrollHeight + 2;
-  const below = window.innerHeight - r.bottom - M - 4;
-  const above = r.top - M - 4;
-  let top, maxH;
-  if (full <= below) { top = r.bottom + 4; maxH = below; }
-  else if (full <= above) { top = r.top - 4 - full; maxH = above; }
-  else if (below >= above) { top = r.bottom + 4; maxH = below; }
-  else { maxH = above; top = Math.max(M, r.top - 4 - Math.min(full, maxH)); }
-  menu.style.maxHeight = `${Math.max(120, maxH)}px`;
-  menu.style.overflowY = "auto";
-  menu.style.top = `${Math.max(M, top)}px`;
-  menu.style.left = `${Math.max(M, Math.min(r.right - 264, window.innerWidth - 264 - 2 * M))}px`;
-  menu.style.transformOrigin = `${Math.max(0, Math.round(r.left + r.width / 2 - parseFloat(menu.style.left)))}px ${top >= r.bottom ? "top" : "bottom"}`;
+  // scroll inside the menu. Re-measured whenever the content changes (mode switch, added/removed option).
+  const fit = (first) => {
+    menu.style.maxHeight = "";
+    const full = menu.scrollHeight + 2;
+    const below = window.innerHeight - r.bottom - M - 4;
+    const above = r.top - M - 4;
+    let top, maxH;
+    if (full <= below) { top = r.bottom + 4; maxH = below; }
+    else if (full <= above) { top = r.top - 4 - full; maxH = above; }
+    else if (below >= above) { top = r.bottom + 4; maxH = below; }
+    else { maxH = above; top = Math.max(M, r.top - 4 - Math.min(full, maxH)); }
+    menu.style.maxHeight = `${Math.max(120, maxH)}px`;
+    menu.style.overflowY = "auto";
+    menu.style.top = `${Math.max(M, top)}px`;
+    if (first) {
+      menu.style.left = `${Math.max(M, Math.min(r.right - 264, window.innerWidth - 264 - 2 * M))}px`;
+      menu.style.transformOrigin = `${Math.max(0, Math.round(r.left + r.width / 2 - parseFloat(menu.style.left)))}px ${top >= r.bottom ? "top" : "bottom"}`;
+    }
+  };
+
+  const render = () => {
+    body.replaceChildren();
+    toggle.textContent = RTime.t(editing ? "done" : "edit");
+    (editing ? renderEdit : renderList)();
+    if (menu.isConnected) fit(false);
+  };
+  toggle.addEventListener("click", (e) => { e.stopPropagation(); editing = !editing; render(); });
+
+  menu.style.visibility = "hidden";
+  render();
+  document.body.appendChild(menu);
+  fit(true);
   menu.style.visibility = "";
   requestAnimationFrame(() => menu && menu.classList.add("gcr-open"));
 }
@@ -600,7 +658,7 @@ function loadLabels() {
   }).catch(() => {});
 }
 
-const loadPresetList = () => alive() && RTime.loadPresets().then((p) => { presets = p; }).catch(() => {});
+const loadPresetList = () => alive() && chrome.storage.local.get("presets").then((o) => { presetData = RTime.sanitizePresets(o.presets); presets = RTime.buildPresets(presetData); }).catch(() => {});
 loadPresetList();
 chrome.storage.onChanged.addListener((_c, area) => area === "local" && loadPresetList());
 

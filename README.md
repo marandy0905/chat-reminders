@@ -23,7 +23,7 @@ Tip: click the puzzle-piece icon in Chrome's toolbar and pin **Chat Reminders** 
 
 - **Shortcut in Chat:** the clock button next to the Chat logo (red with a count when something is due, faded otherwise) opens the popup. Keyboard: **Alt+Shift+R** (change at `chrome://extensions/shortcuts`).
 
-- **Quick options:** the times offered when you set or snooze a reminder (default: 20 minutes, 1 hour, 2 hours, 3 hours, tomorrow 10:00) are editable. Click **Customize options…** at the bottom of the reminder menu, or open the extension's options at `chrome://extensions`. Add, change or remove "from now" times and "tomorrow at" times (up to 8); changes save immediately. "Custom time" is always available.
+- **Quick options:** the times offered when you set or snooze a reminder (default: 20 minutes, 1 hour, 2 hours, 3 hours, tomorrow 10:00) are editable right in the reminder menu: click **Edit** at its top, change, add or remove "from now" times and "tomorrow at" times (up to 8), then **Done**. Changes save immediately. "Custom time" is always available.
 
 ## Updating
 Chrome can't update this extension by itself, so it does it with one click. About once a day it checks for a newer version and, if there is one, shows a notification, a **NEW** badge on the toolbar icon and a banner in the popup and panel.
