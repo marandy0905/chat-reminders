@@ -42,9 +42,9 @@ function btn(label, cls, fn, title) {
   return b;
 }
 
-async function snoozeMenu(r, li) {
+function snoozeMenu(r, li) {
   closeMenu();
-  const presets = await RTime.loadPresets();
+  const presets = RTime.snoozePresets();
   const m = document.createElement("div");
   m.className = "menu";
   m.addEventListener("click", (e) => e.stopPropagation());

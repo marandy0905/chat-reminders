@@ -16,14 +16,14 @@ Tip: click the puzzle-piece icon in Chrome's toolbar and pin **Chat Reminders** 
 
 ## Use
 - **On a message:** hover it, click the clock button, pick a time. The notification shows the message text; "Open chat" takes you back.
-- **Popup:** click the toolbar icon (or the clock button in Chat) to see upcoming reminders with full text, snooze, open or delete.
+- **Popup:** click the toolbar icon (or the clock button in Chat) to see upcoming reminders with full text, snooze, open or delete. **Snooze** opens a dropdown: 10 minutes, 30 minutes, 1 hour, 3 hours, or a custom time.
 - Notifications have **Snooze 20 min** and **Mark as done**; clicking the notification opens the chat. Nothing is marked done unless you press **Mark as done** (or Complete in the popup/overview); otherwise it stays Overdue.
 
-- **Overview:** the popup's **View all & completed** opens a page with Overdue / Today / Tomorrow / Later / Completed, each with Snooze (presets or custom time), Complete, Open and Delete.
+- **Overview:** the popup's **View all & completed** opens a page with Overdue / Today / Tomorrow / Later / Completed, each with the same Snooze dropdown, Complete, Open and Delete.
 
 - **Shortcut in Chat:** the clock button next to the Chat logo (red with a count when something is due, faded otherwise) opens the popup. Keyboard: **Alt+Shift+R** (change at `chrome://extensions/shortcuts`).
 
-- **Quick options:** the times offered when you set or snooze a reminder (default: 20 minutes, 1 hour, 2 hours, 3 hours, tomorrow 10:00) are editable right in the reminder menu: click **Edit** at its top, change, add or remove "from now" times and "tomorrow at" times (up to 8), then **Done**. Changes save immediately. "Custom time" is always available.
+- **Quick options:** the times offered when you set a reminder (default: 20 minutes, 1 hour, 2 hours, 3 hours, tomorrow 10:00) are editable right in the reminder menu: click **Edit** at its top, change, add or remove "from now" times and "tomorrow at" times (up to 8), then **Done**. Changes save immediately. "Custom time" is always available.
 
 ## Updating
 Chrome can't update this extension by itself, so it does it with one click. About once a day it checks for a newer version and, if there is one, shows a notification, a **NEW** badge on the toolbar icon and a banner in the popup and panel.

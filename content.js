@@ -276,7 +276,32 @@ function savePresets(list) {
   if (alive()) chrome.storage.local.set({ presets: presetData }).catch(() => {});
 }
 
-function openMenu(row, anchor) {
+// Fit the whole menu on screen: open below the button if it fits, else above, else take the larger side and
+// scroll inside the menu. Call the result again whenever the content changes (mode switch, added/removed option).
+function menuFitter(anchor) {
+  const r = anchor.getBoundingClientRect();
+  const M = 8; // margin kept to the viewport edges
+  return (first) => {
+    menu.style.maxHeight = "";
+    const full = menu.scrollHeight + 2;
+    const below = window.innerHeight - r.bottom - M - 4;
+    const above = r.top - M - 4;
+    let top, maxH;
+    if (full <= below) { top = r.bottom + 4; maxH = below; }
+    else if (full <= above) { top = r.top - 4 - full; maxH = above; }
+    else if (below >= above) { top = r.bottom + 4; maxH = below; }
+    else { maxH = above; top = Math.max(M, r.top - 4 - Math.min(full, maxH)); }
+    menu.style.maxHeight = `${Math.max(120, maxH)}px`;
+    menu.style.overflowY = "auto";
+    menu.style.top = `${Math.max(M, top)}px`;
+    if (first) {
+      menu.style.left = `${Math.max(M, Math.min(r.right - 264, window.innerWidth - 264 - 2 * M))}px`;
+      menu.style.transformOrigin = `${Math.max(0, Math.round(r.left + r.width / 2 - parseFloat(menu.style.left)))}px ${top >= r.bottom ? "top" : "bottom"}`;
+    }
+  };
+}
+
+function newMenu() {
   closeMenu();
   menu = document.createElement("div");
   menu.className = "gcr-menu";
@@ -284,14 +309,52 @@ function openMenu(row, anchor) {
   // Typing in the menu's fields must not trigger Chat's keyboard shortcuts.
   menu.addEventListener("keydown", (e) => e.stopPropagation());
   menu.addEventListener("keyup", (e) => e.stopPropagation());
-  const mk = (tag, cls, text) => {
-    const n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (text != null) n.textContent = text;
-    if (tag === "button") n.type = "button";
-    return n;
-  };
+  return menu;
+}
 
+function showMenu(fit) {
+  menu.style.visibility = "hidden";
+  document.body.appendChild(menu);
+  fit(true);
+  menu.style.visibility = "";
+  requestAnimationFrame(() => menu && menu.classList.add("gcr-open"));
+}
+
+const mk = (tag, cls, text) => {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  if (tag === "button") n.type = "button";
+  return n;
+};
+
+// Snooze dropdown for a reminder in the panel: the fixed snooze times, then a custom date/time.
+function openSnoozeMenu(anchor, onPick) {
+  newMenu();
+  const head = mk("div", "gcr-menu-head");
+  head.appendChild(mk("span", null, RTime.t("snooze")));
+  menu.appendChild(head);
+  const pick = (when) => { closeMenu(); onPick(when); };
+  for (const p of RTime.snoozePresets()) {
+    const b = mk("button", "gcr-menu-item", p.label);
+    b.appendChild(mk("span", "gcr-menu-hint", RTime.formatTime(p.at(Date.now()))));
+    b.addEventListener("click", (e) => { e.stopPropagation(); pick(p.at(Date.now())); });
+    menu.appendChild(b);
+  }
+  menu.append(mk("div", "gcr-menu-sep"), mk("div", "gcr-menu-sub", RTime.t("custom_time")));
+  const picker = RTime.createPicker(Date.now() + 3600e3);
+  const go = mk("button", "gcr-menu-primary", RTime.t("set_custom"));
+  go.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const when = picker.get();
+    if (Number.isFinite(when)) pick(when);
+  });
+  menu.append(picker.el, go);
+  showMenu(menuFitter(anchor));
+}
+
+function openMenu(row, anchor) {
+  newMenu();
   const head = mk("div", "gcr-menu-head");
   const title = mk("span", null, RTime.t("remind_me"));
   const toggle = mk("button", "gcr-menu-edit", RTime.t("edit"));
@@ -377,28 +440,7 @@ function openMenu(row, anchor) {
     if (full) body.appendChild(mk("div", "gcr-menu-sub", RTime.t("opt_max", { n: RTime.MAX_PRESETS })));
   };
 
-  const r = anchor.getBoundingClientRect();
-  const M = 8; // margin kept to the viewport edges
-  // Fit the whole menu on screen: open below the button if it fits, else above, else take the larger side and
-  // scroll inside the menu. Re-measured whenever the content changes (mode switch, added/removed option).
-  const fit = (first) => {
-    menu.style.maxHeight = "";
-    const full = menu.scrollHeight + 2;
-    const below = window.innerHeight - r.bottom - M - 4;
-    const above = r.top - M - 4;
-    let top, maxH;
-    if (full <= below) { top = r.bottom + 4; maxH = below; }
-    else if (full <= above) { top = r.top - 4 - full; maxH = above; }
-    else if (below >= above) { top = r.bottom + 4; maxH = below; }
-    else { maxH = above; top = Math.max(M, r.top - 4 - Math.min(full, maxH)); }
-    menu.style.maxHeight = `${Math.max(120, maxH)}px`;
-    menu.style.overflowY = "auto";
-    menu.style.top = `${Math.max(M, top)}px`;
-    if (first) {
-      menu.style.left = `${Math.max(M, Math.min(r.right - 264, window.innerWidth - 264 - 2 * M))}px`;
-      menu.style.transformOrigin = `${Math.max(0, Math.round(r.left + r.width / 2 - parseFloat(menu.style.left)))}px ${top >= r.bottom ? "top" : "bottom"}`;
-    }
-  };
+  const fit = menuFitter(anchor);
 
   const render = () => {
     body.replaceChildren();
@@ -408,12 +450,8 @@ function openMenu(row, anchor) {
   };
   toggle.addEventListener("click", (e) => { e.stopPropagation(); editing = !editing; render(); });
 
-  menu.style.visibility = "hidden";
   render();
-  document.body.appendChild(menu);
-  fit(true);
-  menu.style.visibility = "";
-  requestAnimationFrame(() => menu && menu.classList.add("gcr-open"));
+  showMenu(fit);
 }
 
 // Chat's own hover toolbar (reactions, reply, more...). We put our clock button inside it, next to its
@@ -720,6 +758,7 @@ if (window.top === window) {
   let panel = null;
   const closePanel = () => {
     if (!panel) return;
+    closeMenu();
     const p = panel;
     panel = panelEl = null;
     p.classList.remove("gcr-open");
@@ -727,8 +766,9 @@ if (window.top === window) {
     document.removeEventListener("pointerdown", onPanelOutside, true);
     document.removeEventListener("keydown", onPanelKey, true);
   };
-  const onPanelOutside = (e) => { if (panel && !panel.contains(e.target) && !launcher.contains(e.target)) closePanel(); };
-  const onPanelKey = (e) => { if (e.key === "Escape") closePanel(); };
+  // The snooze dropdown lives outside the panel (so the list can't clip it); clicks in it keep the panel open.
+  const onPanelOutside = (e) => { if (panel && !panel.contains(e.target) && !launcher.contains(e.target) && !(menu && menu.contains(e.target))) closePanel(); };
+  const onPanelKey = (e) => { if (e.key !== "Escape") return; if (menu) closeMenu(); else closePanel(); };
 
   const renderPanel = async () => {
     if (!panel || !alive()) return;
@@ -758,9 +798,16 @@ if (window.top === window) {
       meta.append(el("span", null, RTime.formatWhen(r.when)));
       body.append(meta);
       const actions = el("div", "gcr-p-actions");
-      const snooze = el("button", "gcr-p-snooze", RTime.t("snooze_10"));
+      const snooze = el("button", "gcr-p-snooze", RTime.t("snooze"));
       snooze.type = "button";
-      snooze.addEventListener("click", async (e) => { e.stopPropagation(); await call({ type: "snooze", id: r.id, ms: 10 * 60e3 }).catch(() => {}); renderPanel(); });
+      snooze.setAttribute("aria-haspopup", "menu");
+      snooze.appendChild(RTime.icon("caret", 14));
+      snooze.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (menu && menu.anchor === snooze) return closeMenu();
+        openSnoozeMenu(snooze, async (when) => { await call({ type: "snooze", id: r.id, when }).catch(() => {}); renderPanel(); });
+        menu.anchor = snooze;
+      });
       const del = el("button", "gcr-p-del");
       del.type = "button";
       del.title = RTime.t("del");
