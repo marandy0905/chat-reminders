@@ -66,23 +66,36 @@
 /* Something is due: solid red, impossible to miss. */
 .gcr-launcher.gcr-due { background: #d93025; color: #fff; opacity: 1; box-shadow: 0 2px 8px rgba(217,48,37,.6); }
 .gcr-launcher.gcr-due:hover { transform: scale(1.08); }
+/* Slack / Teams: a small tab on the right edge of the window (Chat places the launcher next to "New chat"). */
+.gcr-launcher.gcr-edge { top: 50%; left: auto; right: 0; height: 40px; padding: 0 10px 0 12px; transform: translateY(-50%);
+  border-radius: 20px 0 0 20px; background: var(--gcr-bg); color: var(--gcr-fg); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.gcr-launcher.gcr-edge:hover { background: var(--gcr-hover); }
+.gcr-launcher.gcr-edge.gcr-due { background: #d93025; color: #fff; }
+.gcr-launcher.gcr-edge.gcr-due:hover { transform: translateY(-50%) scale(1.08); }
 .gcr-inline {
   flex: none; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
   margin: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer;
 }
 .gcr-inline:hover { background: rgba(128,128,128,.28); }
+.gcr-inline.gcr-inline-slack { background: transparent !important; box-shadow: none !important; }
+.gcr-inline.gcr-inline-slack:hover { background: rgba(128,128,128,.2) !important; }
 /* Reminded message: a flat tinted band with a plain "Reminder set for … · View reminders" line on top.
-   Blue while pending, red once due. The row is Chat's element, so its theme comes from
-   .gcr-reminder-dark rather than .gcr-dark. */
-.gcr-has-reminder {
+   Blue while pending, red once due. The row is the app's element, so its theme comes from
+   the "dark" in data-gcr-reminder rather than .gcr-dark. */
+[data-gcr-reminder] {
   --gcr-tone: #0b57d0; --gcr-tone-soft: rgba(11, 87, 208, .08);
   background: var(--gcr-tone-soft);
   /* Breathing room: space around the band, and inside it below the last bubble. */
   margin-top: 10px !important; margin-bottom: 10px !important; padding-top: 4px !important; padding-bottom: 10px !important;
 }
-.gcr-has-reminder.gcr-reminder-dark { --gcr-tone: #6cb4ee; --gcr-tone-soft: rgba(108, 180, 238, .10); }
-.gcr-has-reminder.gcr-reminder-due { --gcr-tone: #d93025; --gcr-tone-soft: rgba(217, 48, 37, .08); }
-.gcr-has-reminder.gcr-reminder-dark.gcr-reminder-due { --gcr-tone: #ff8b85; --gcr-tone-soft: rgba(255, 139, 133, .12); }
+/* The message a reminder was opened for: a short pulse so it's easy to spot after scrolling. */
+[data-gcr-flash] { animation: gcr-flash 2s ease-out; }
+@keyframes gcr-flash { 0%, 30% { box-shadow: inset 0 0 0 2px #f9ab00; background-color: rgba(249, 171, 0, .18); } 100% { box-shadow: inset 0 0 0 2px transparent; } }
+/* Slack sizes its message list from measured heights: no outer margins there, or messages shift under the mouse. */
+[data-gcr-reminder][data-qa="message_container"] { margin-top: 0 !important; margin-bottom: 0 !important; padding-bottom: 6px !important; }
+[data-gcr-reminder~="dark"] { --gcr-tone: #6cb4ee; --gcr-tone-soft: rgba(108, 180, 238, .10); }
+[data-gcr-reminder~="due"] { --gcr-tone: #d93025; --gcr-tone-soft: rgba(217, 48, 37, .08); }
+[data-gcr-reminder~="dark"][data-gcr-reminder~="due"] { --gcr-tone: #ff8b85; --gcr-tone-soft: rgba(255, 139, 133, .12); }
 .gcr-label {
   display: flex; align-items: center; gap: 6px; margin: 6px 0 4px 12px; padding: 0;
   color: var(--gcr-tone, var(--gcr-muted));
@@ -90,6 +103,8 @@
 }
 /* Your own messages in the standard layout are right-aligned: follow them. */
 .gcr-label.gcr-label-end { margin-left: auto; margin-right: 12px; }
+/* Teams: on its own line at the top of the bubble, never squeezed by the bubble's layout. */
+.gcr-label.gcr-label-teams { flex: none; width: 100%; margin: 0 0 4px; white-space: nowrap; }
 .gcr-label button { padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; text-decoration: none; }
 .gcr-label button:hover { text-decoration: underline; }
 .gcr-label .gcr-label-remove { opacity: .75; }
@@ -125,6 +140,7 @@
 .gcr-p-from { font-size: 12px; font-weight: 600; color: var(--gcr-muted); }
 .gcr-p-text { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; font-size: 15px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
 .gcr-p-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 12px; color: var(--gcr-muted); }
+.gcr-p-site { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gcr-site) 16%, transparent); color: color-mix(in srgb, var(--gcr-site) 70%, var(--gcr-fg)); font-weight: 600; }
 .gcr-p-duepill { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gcr-due) 16%, transparent); color: var(--gcr-due); font-weight: 600; }
 .gcr-p-actions { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity .15s; }
 .gcr-p-row:hover .gcr-p-actions, .gcr-p-row:focus-within .gcr-p-actions { opacity: 1; }

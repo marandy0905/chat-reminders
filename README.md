@@ -1,8 +1,8 @@
-# Google Chat Reminders
+# Chat Reminders
 
 **English** | [繁體中文](README.zh-TW.md)
 
-Reminders for Google Chat (chat.google.com and Gmail's Chat).
+Reminders for **Slack, Google Chat and Microsoft Teams** in the browser (app.slack.com, chat.google.com and Gmail's Chat, teams.microsoft.com / teams.cloud.microsoft). Reminders from all three apps land in one list.
 
 ## Install (no coding needed)
 1. Go to the [latest release](https://github.com/marandy0905/chat-reminders/releases/latest) and download **chat-reminders.zip**.
@@ -10,18 +10,19 @@ Reminders for Google Chat (chat.google.com and Gmail's Chat).
 3. In Chrome, open `chrome://extensions` (paste it into the address bar).
 4. Turn on **Developer mode** (switch at the top right).
 5. Click **Load unpacked** and choose the unzipped folder.
-6. Refresh Google Chat. Allow Chrome notifications in your computer's settings if asked.
+6. Refresh your Slack, Google Chat and Teams tabs. Allow Chrome notifications in your computer's settings if asked.
 
 Tip: click the puzzle-piece icon in Chrome's toolbar and pin **Chat Reminders** so the icon is always visible.
 
 ## Use
-- **On a message:** hover it, click the clock button, pick a time. The notification shows the message text; "Open chat" takes you back.
+- **On a message:** hover it, click the clock button (in the app's own hover toolbar, next to "More"), pick a time. The notification shows the message text and which app it came from; clicking it brings that app's tab to the front and opens the message.
+- **One list for every app:** the popup, the overview and the in-page panel all show the reminders from Slack, Google Chat and Teams together, each tagged with its app. The overview can be filtered by app.
 - **Popup:** click the toolbar icon (or the clock button in Chat) to see upcoming reminders with full text, snooze, open or delete. **Snooze** opens a dropdown: 10 minutes, 30 minutes, 1 hour, 3 hours, or a custom time.
 - Notifications have **Snooze 20 min** and **Mark as done**; clicking the notification opens the chat. Nothing is marked done unless you press **Mark as done** (or Complete in the popup/overview); otherwise it stays Overdue.
 
 - **Overview:** the popup's **View all & completed** opens a page with Overdue / Today / Tomorrow / Later / Completed, each with the same Snooze dropdown, Complete, Open and Delete.
 
-- **Shortcut in Chat:** the clock button next to the Chat logo (red with a count when something is due, faded otherwise) opens the popup. Keyboard: **Alt+Shift+R** (change at `chrome://extensions/shortcuts`).
+- **Shortcut in the app:** the clock button (in Google Chat next to "New chat"; in Slack and Teams a small tab on the right edge of the window) opens the reminders panel. It turns red with a count when something is due, in any of the three apps. Keyboard: **Alt+Shift+R** (change at `chrome://extensions/shortcuts`).
 
 - **Quick options:** the times offered when you set a reminder (default: 20 minutes, 1 hour, 2 hours, 3 hours, tomorrow 10:00) are editable right in the reminder menu: click **Edit** at its top, change, add or remove "from now" times and "tomorrow at" times (up to 8), then **Done**. Changes save immediately. "Custom time" is always available.
 
@@ -40,8 +41,9 @@ The whole extension (menus, panel, popup, overview, notifications, update page) 
 
 ## Notes
 - All data stays in `chrome.storage.local`. The only network requests are the daily update check (this repo's public `manifest.json`) and, when you click **Update now**, the release zip from GitHub; no reminder data is sent.
-- Google Chat's DOM is obfuscated. If the clock button stops appearing, update `SELECTORS` at the top of `content.js`.
-- Message deep links aren't exposed in the DOM, so "Open chat" opens the space/DM URL that was current when you set the reminder.
+- Each app's markup lives in its own adapter: `sites/gchat.js`, `sites/slack.js`, `sites/teams.js` (shared UI in `content.js`). If the clock button stops appearing in one app, update the selectors at the top of its adapter. **Shift+click** the clock button copies what the extension sees on that message (as JSON) to the clipboard, to help with that.
+- Links: Google Chat links are built from the message ids (or the space/DM when they can't be found). Slack uses the message's own permalink. Teams links need the conversation id; when it can't be found, clicking the reminder only brings Teams to the front.
+- Reminders made before Slack/Teams support are treated as Google Chat reminders.
 
 ## Third-party
 `fflate.js` is [fflate](https://github.com/101arrowz/fflate) (MIT), used to unpack the update zip.

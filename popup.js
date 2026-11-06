@@ -87,6 +87,12 @@ async function render() {
     b.title = r.text;
     const meta = document.createElement("div");
     meta.className = "meta";
+    const site = RTime.SITES[RTime.siteOf(r)];
+    const chip = document.createElement("span");
+    chip.className = "site";
+    chip.textContent = site.short;
+    chip.style.setProperty("--site", site.color);
+    meta.append(chip);
     if (r.when <= now) {
       const due = document.createElement("span");
       due.className = "due";

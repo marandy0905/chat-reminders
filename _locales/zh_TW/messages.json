@@ -1,6 +1,6 @@
 {
   "description": {
-    "message": "為 Google Chat 加上訊息提醒：設定提醒，時間到時顯示桌面通知。"
+    "message": "為 Slack、Google Chat 與 Teams 加上訊息提醒：設定提醒、時間到時顯示桌面通知，所有提醒集中在同一個清單。"
   },
   "actionTitle": {
     "message": "提醒"
