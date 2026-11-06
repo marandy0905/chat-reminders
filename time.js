@@ -88,12 +88,42 @@
     return m ? m[1] : "";
   }
 
-  // Labels for messages with an active reminder: { messageId: { text, overdue } }, nearest reminder per message.
-  function reminderLabels(reminders, now, fmt = formatWhen) {
+  // The chat apps a reminder can come from. `origins` are tab match patterns; `hosts` are the link hosts the app
+  // opens in-app. Reminders saved before multi-site support have no `site` and are Google Chat.
+  const SITES = {
+    gchat: {
+      label: "Google Chat", short: "Chat", color: "#1e8e3e", home: "https://chat.google.com/",
+      origins: ["https://chat.google.com/*", "https://mail.google.com/chat/*"], hosts: /^chat\.google\.com$/,
+    },
+    slack: {
+      label: "Slack", short: "Slack", color: "#611f69", home: "https://app.slack.com/client",
+      origins: ["https://app.slack.com/*"], hosts: /(^|\.)slack\.com$/,
+    },
+    teams: {
+      label: "Microsoft Teams", short: "Teams", color: "#5b5fc7", home: "https://teams.microsoft.com/",
+      origins: ["https://teams.microsoft.com/*", "https://teams.cloud.microsoft/*"], hosts: /^teams\.(microsoft\.com|cloud\.microsoft)$/,
+    },
+  };
+  // The address to load in the tab when the app can't follow a reminder's link in place. Both apps send their
+  // message links, loaded directly, to an "open the desktop app?" launcher page; their web apps take the same link
+  // as Teams /_#/l/… and Slack /messages/… (what the launcher's "open in the browser" links use).
+  function webUrl(r) {
+    const url = r.url || "";
+    const site = siteOf(r);
+    let m;
+    if (site === "teams" && (m = /^(https:\/\/[^/]+)(\/l\/.*)$/.exec(url))) return `${m[1]}/_#${m[2]}`;
+    if (site === "slack" && (m = /^(https:\/\/[^/]+\.slack\.com)\/archives\/(.*)$/.exec(url))) return `${m[1]}/messages/${m[2]}`;
+    return url;
+  }
+  const siteOf = (r) => (r && Object.prototype.hasOwnProperty.call(SITES, r.site) ? r.site : "gchat");
+
+  // Labels for messages with an active reminder on one site: { messageKey: { text, overdue, ids } }, nearest
+  // reminder per message. The key is the one the site's content script stored, or (Chat) the id in the link.
+  function reminderLabels(reminders, now, fmt = formatWhen, site = "gchat") {
     const nearest = {};
     const ids = {};
     for (const [key, r] of Object.entries(reminders || {})) {
-      const id = !r.done && messageIdOf(r.url);
+      const id = !r.done && siteOf(r) === site && (r.key || messageIdOf(r.url));
       if (!id) continue;
       (ids[id] = ids[id] || []).push(r.id || key);
       if (!nearest[id] || r.when < nearest[id].when) nearest[id] = r;
@@ -177,10 +207,10 @@
       reminders: "Reminders",
       view_all: "View all",
       caught_up: "All caught up",
-      empty_hint: "Hover a message in Google Chat and click the clock to add a reminder.",
+      empty_hint: "Hover a message in Slack, Google Chat or Teams and click the clock to add a reminder.",
       mark_done: "Mark as done",
       del: "Delete",
-      open_msg: "Open this message in Chat",
+      open_msg: "Open this message",
       due: "Due",
       sub_due: "{due} due · {total} total",
       sub_up: "{n} upcoming",
@@ -200,11 +230,12 @@
       launcher_title: "Show my reminders",
       launcher_due_one: "{n} reminder due",
       launcher_due_other: "{n} reminders due",
-      msg_fallback: "Message in Google Chat",
+      msg_fallback: "Message",
       notif_reminder: "Reminder",
       btn_snooze20: "Snooze 20 min",
       ov_title: "Reminders",
-      ov_empty: "No reminders yet. Hover a message in Google Chat and click the clock button, or use the toolbar popup.",
+      ov_empty: "No reminders yet. Hover a message in Slack, Google Chat or Teams and click the clock button, or use the toolbar popup.",
+      filter_all: "All",
       sec_overdue: "Overdue",
       sec_today: "Today",
       sec_tomorrow: "Tomorrow",
@@ -254,7 +285,7 @@
       dl_fail: "Download failed ({status}).",
       bad_zip: "The download doesn't look like a Chat Reminders release.",
       installing: "Installing…",
-      done: "Updated. Reloading… refresh Google Chat afterwards.",
+      done: "Updated. Reloading… refresh your chat tabs afterwards.",
       banner: "Update available: v{version}. Click to update.",
       notif_title: "Chat Reminders update available",
       notif_msg: "Version {latest} is out (you have {current}). Click to update in one step.",
@@ -263,10 +294,10 @@
       reminders: "提醒",
       view_all: "查看全部",
       caught_up: "全部完成了",
-      empty_hint: "將滑鼠移到 Google Chat 的訊息上，點選時鐘按鈕即可新增提醒。",
+      empty_hint: "將滑鼠移到 Slack、Google Chat 或 Teams 的訊息上，點選時鐘按鈕即可新增提醒。",
       mark_done: "標示為完成",
       del: "刪除",
-      open_msg: "在 Chat 中開啟這則訊息",
+      open_msg: "開啟這則訊息",
       due: "已到期",
       sub_due: "{due} 則已到期 · 共 {total} 則",
       sub_up: "{n} 則即將到來",
@@ -286,11 +317,12 @@
       launcher_title: "顯示我的提醒",
       launcher_due_one: "{n} 則提醒已到期",
       launcher_due_other: "{n} 則提醒已到期",
-      msg_fallback: "Google Chat 訊息",
+      msg_fallback: "訊息",
       notif_reminder: "提醒",
       btn_snooze20: "延後 20 分鐘",
       ov_title: "提醒",
-      ov_empty: "還沒有提醒。將滑鼠移到 Google Chat 的訊息上並點選時鐘按鈕，或使用工具列的彈出視窗。",
+      ov_empty: "還沒有提醒。將滑鼠移到 Slack、Google Chat 或 Teams 的訊息上並點選時鐘按鈕，或使用工具列的彈出視窗。",
+      filter_all: "全部",
       sec_overdue: "已逾期",
       sec_today: "今天",
       sec_tomorrow: "明天",
@@ -340,7 +372,7 @@
       dl_fail: "下載失敗（{status}）。",
       bad_zip: "下載的檔案看起來不是 Chat Reminders 的發行檔。",
       installing: "安裝中…",
-      done: "更新完成，即將重新載入… 之後請重新整理 Google Chat。",
+      done: "更新完成，即將重新載入… 之後請重新整理聊天分頁。",
       banner: "有新版本 v{version}，點此更新。",
       notif_title: "Chat Reminders 有新版本",
       notif_msg: "新版本 {latest} 已發布（目前 {current}）。點選即可一鍵更新。",
@@ -359,6 +391,6 @@
     return s.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
   }
 
-  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
+  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, SITES, siteOf, webUrl, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);

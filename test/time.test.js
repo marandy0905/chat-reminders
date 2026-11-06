@@ -53,6 +53,32 @@ assert.deepStrictEqual(labels, {
   msgBBBBBBBB: { text: `Reminder due @${now - 60e3}`, overdue: true, ids: ["c"] },
 });
 assert.deepStrictEqual(T.reminderLabels({}, now, fmt), {});
+
+// Sites: old reminders (no site) are Chat; labels only cover the asked site and prefer the stored key.
+assert.strictEqual(T.siteOf({}), "gchat");
+assert.strictEqual(T.siteOf({ site: "slack" }), "slack");
+assert.strictEqual(T.siteOf({ site: "toString" }), "gchat");
+const mixed = {
+  a: { when: now + 60e3, url: link("msgAAAAAAAA") },
+  s: { when: now + 60e3, site: "slack", key: "1700000000.123456", url: "https://x.slack.com/archives/C1/p1700000000123456" },
+  t: { when: now - 60e3, site: "teams", key: "1700000000000", url: "https://teams.microsoft.com/v2/" },
+};
+assert.deepStrictEqual(Object.keys(T.reminderLabels(mixed, now, fmt)), ["msgAAAAAAAA"]);
+assert.deepStrictEqual(T.reminderLabels(mixed, now, fmt, "slack"), {
+  "1700000000.123456": { text: `Reminder set for @${now + 60e3}`, overdue: false, ids: ["s"] },
+});
+assert.strictEqual(T.reminderLabels(mixed, now, fmt, "teams")["1700000000000"].overdue, true);
+assert.ok(T.SITES.slack.hosts.test("acme.slack.com") && !T.SITES.slack.hosts.test("slack.com.evil.io"));
+assert.ok(T.SITES.teams.hosts.test("teams.cloud.microsoft"));
+// Reloading Teams with a /l/ link goes through the web app's /_#/l/ route, not the desktop-app launcher.
+assert.strictEqual(
+  T.webUrl({ site: "teams", url: "https://teams.cloud.microsoft/l/message/19:a@thread.tacv2/17?tenantId=t&createdTime=17" }),
+  "https://teams.cloud.microsoft/_#/l/message/19:a@thread.tacv2/17?tenantId=t&createdTime=17"
+);
+assert.strictEqual(T.webUrl({ site: "teams", url: "https://teams.cloud.microsoft/v2/" }), "https://teams.cloud.microsoft/v2/");
+assert.strictEqual(T.webUrl({ site: "slack", url: "https://x.slack.com/archives/C1/p1?thread_ts=1.2" }), "https://x.slack.com/messages/C1/p1?thread_ts=1.2");
+assert.strictEqual(T.webUrl({ site: "slack", url: "https://app.slack.com/client/T1/C1" }), "https://app.slack.com/client/T1/C1");
+assert.strictEqual(T.webUrl({ url: "https://chat.google.com/room/a/b/c" }), "https://chat.google.com/room/a/b/c");
 assert.ok(T.compareVersions("1.10.0", "1.9.2") > 0);
 assert.ok(T.compareVersions("1.0.0", "1.0.1") < 0);
 assert.strictEqual(T.compareVersions("1.0", "1.0.0"), 0);

@@ -23,6 +23,11 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .menu .rt-picker { display: flex; flex-direction: column; gap: 6px; margin: 6px 14px; }
 .menu input, .menu select { padding: 5px 6px; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; }
 .menu .go { margin: 0 14px 6px; width: calc(100% - 28px); }
+#filters { display: flex; flex-wrap: wrap; gap: 6px; }
+#filters button { border-radius: 999px; padding: 4px 12px; }
+#filters button.on { background: var(--site, var(--accent)); border-color: var(--site, var(--accent)); color: #fff; }
+.t i.site { display: inline-block; margin-right: 6px; padding: 0 7px; border-radius: 999px; font-style: normal; font-size: 12px; font-weight: 600;
+  background: color-mix(in srgb, var(--site) 16%, transparent); color: color-mix(in srgb, var(--site) 70%, var(--fg)); }
 #empty { color: var(--muted); display: none; }
 .from { margin-bottom: 2px; font-size: 12px; font-weight: 600; color: var(--accent); }
 li { cursor: pointer; }

@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Google Chat Reminders",
+  "name": "Chat Reminders",
   "version": "1.0.7",
   "description": "__MSG_description__",
   "permissions": [
@@ -11,6 +11,9 @@
   "host_permissions": [
     "https://chat.google.com/*",
     "https://mail.google.com/*",
+    "https://app.slack.com/*",
+    "https://teams.microsoft.com/*",
+    "https://teams.cloud.microsoft/*",
     "https://raw.githubusercontent.com/marandy0905/chat-reminders/*",
     "https://github.com/marandy0905/chat-reminders/*",
     "https://*.githubusercontent.com/*"
@@ -40,6 +43,7 @@
       ],
       "js": [
         "time.js",
+        "sites/gchat.js",
         "content.js"
       ],
       "css": [
@@ -47,6 +51,35 @@
       ],
       "run_at": "document_idle",
       "all_frames": true
+    },
+    {
+      "matches": [
+        "https://app.slack.com/*"
+      ],
+      "js": [
+        "time.js",
+        "sites/slack.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://teams.microsoft.com/*",
+        "https://teams.cloud.microsoft/*"
+      ],
+      "js": [
+        "time.js",
+        "sites/teams.js",
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
     }
   ],
   "commands": {

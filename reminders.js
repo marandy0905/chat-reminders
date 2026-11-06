@@ -75,11 +75,16 @@ function row(r) {
   const b = document.createElement("b");
   b.textContent = r.text;
   b.title = r.text;
+  const site = RTime.SITES[RTime.siteOf(r)];
+  const chip = document.createElement("i");
+  chip.className = "site";
+  chip.textContent = site.short;
+  chip.style.setProperty("--site", site.color);
   const s = document.createElement("span");
   s.textContent = r.done
     ? RTime.t("completed_at", { when: RTime.formatWhen(r.done) })
     : RTime.formatWhen(r.when) + (r.source === "message" ? ` · ${RTime.t("from_message")}` : "");
-  t.append(b, s);
+  t.append(b, chip, s);
   li.appendChild(t);
   li.title = RTime.t("open_msg");
   li.addEventListener("click", () => send({ type: "open", id: r.id }));
@@ -96,9 +101,33 @@ function row(r) {
   return li;
 }
 
+// Filter row: All · Slack · Chat · Teams. The choice is kept for next time.
+let filter = "all";
+function renderFilters(all) {
+  const bar = document.getElementById("filters");
+  bar.replaceChildren();
+  const opts = [["all", RTime.t("filter_all"), all.length]];
+  for (const [id, site] of Object.entries(RTime.SITES)) {
+    const n = all.filter((r) => RTime.siteOf(r) === id).length;
+    if (n || filter === id) opts.push([id, site.short, n]);
+  }
+  if (opts.length <= 2 && filter === "all") return; // one app only: nothing to filter
+  for (const [id, label, n] of opts) {
+    const b = btn(`${label} (${n})`, id === filter ? "on" : "", () => {
+      filter = id;
+      chrome.storage.local.set({ overviewFilter: id }).catch(() => {});
+      render();
+    });
+    if (id !== "all") b.style.setProperty("--site", RTime.SITES[id].color);
+    bar.appendChild(b);
+  }
+}
+
 async function render() {
   closeMenu();
-  const items = await send({ type: "list" });
+  const all = await send({ type: "list" });
+  renderFilters(all);
+  const items = filter === "all" ? all : all.filter((r) => RTime.siteOf(r) === filter);
   const now = Date.now();
   const groups = {};
   items.forEach((r) => (groups[sectionOf(r, now)] ||= []).push(r));
@@ -118,7 +147,9 @@ async function render() {
   }
 }
 
-chrome.storage.onChanged.addListener((_c, area) => area === "local" && render());
+chrome.storage.onChanged.addListener((c, area) => area === "local" && !c.overviewFilter && render());
 document.addEventListener("click", closeMenu);
 setInterval(render, 60e3); // refresh sections as time passes
-render();
+chrome.storage.local.get("overviewFilter").then((o) => {
+  if (o.overviewFilter && (o.overviewFilter === "all" || RTime.SITES[o.overviewFilter])) filter = o.overviewFilter;
+}).catch(() => {}).finally(render);

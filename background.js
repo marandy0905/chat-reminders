@@ -2,7 +2,6 @@ importScripts("time.js");
 
 const KEY = "reminders";
 const SNOOZE_MS = 20 * 60 * 1000;
-const FALLBACK_URL = "https://chat.google.com/";
 
 async function load() {
   const o = await chrome.storage.local.get(KEY);
@@ -15,15 +14,19 @@ function schedule(r) {
   chrome.alarms.create(r.id, { when: Math.max(r.when, Date.now() + 1000) });
 }
 
-async function add({ text, sender, when, url, source }) {
+async function add({ text, sender, when, url, source, site, key }) {
+  site = RTime.siteOf({ site });
   const r = {
     id: `r_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     text: String(text || "Reminder").slice(0, 500),
     sender: String(sender || "").slice(0, 100),
     when,
-    url: url || FALLBACK_URL,
+    url: url || RTime.SITES[site].home,
     source: source || "manual",
+    site,
   };
+  // The message's id on its site, for the label on the message (Chat derives it from the link instead).
+  if (key) r.key = String(key).slice(0, 200);
   const all = await load();
   all[r.id] = r;
   await save(all);
@@ -82,7 +85,7 @@ chrome.alarms.onAlarm.addListener(async ({ name }) => {
     iconUrl: "icons/icon128.png",
     title: RTime.t("notif_reminder"),
     message: r.text,
-    contextMessage: "Google Chat",
+    contextMessage: RTime.SITES[RTime.siteOf(r)].label,
     requireInteraction: true,
     buttons: [{ title: RTime.t("btn_snooze20") }, { title: RTime.t("mark_done") }],
   });
@@ -136,27 +139,31 @@ chrome.runtime.onInstalled.addListener(scheduleUpdateCheck);
 chrome.runtime.onStartup.addListener(scheduleUpdateCheck);
 
 async function open(r) {
-  // Only match Chat itself (never the Gmail app, which lives at mail.google.com/mail/ and can also be a PWA).
-  const tabs = await chrome.tabs.query({ url: ["https://chat.google.com/*", "https://mail.google.com/chat/*"] });
+  const site = RTime.SITES[RTime.siteOf(r)];
+  // Only match the app itself (for Chat never the Gmail app, which lives at mail.google.com/mail/ and can also be a PWA).
+  const tabs = await chrome.tabs.query({ url: site.origins });
   const wins = await Promise.all(tabs.map((t) => chrome.windows.get(t.windowId)));
-  // Prefer an installed-PWA ("app") window on chat.google.com, then any chat.google.com tab.
-  const rank = (i) => (new URL(tabs[i].url).hostname === "chat.google.com" ? 0 : 2) + (wins[i].type === "app" ? 0 : 1);
+  // Prefer an installed-PWA ("app") window on the app's own host (Chat: chat.google.com over Gmail), then any tab.
+  const rank = (i) => (site.hosts.test(new URL(tabs[i].url).hostname) ? 0 : 2) + (wins[i].type === "app" ? 0 : 1);
   const order = tabs.map((_, i) => i).sort((a, b) => rank(a) - rank(b));
   const i = order[0];
-  if (i === undefined) return chrome.tabs.create({ url: r.url });
+  if (i === undefined) return chrome.tabs.create({ url: RTime.webUrl(r) });
 
   const tab = tabs[i];
-  const sameOrigin = new URL(r.url).origin === new URL(tab.url).origin;
+  // A link the app in this tab opens itself (Slack's links are on <workspace>.slack.com while the app runs on
+  // app.slack.com). Chat inside Gmail doesn't count: it can't follow chat.google.com links in place.
+  const inApp = site.hosts.test(new URL(r.url).hostname) && site.hosts.test(new URL(tab.url).hostname);
   await chrome.windows.update(tab.windowId, { focused: true, state: wins[i].state === "minimized" ? "normal" : undefined });
   await chrome.tabs.update(tab.id, { active: true });
-  if (!sameOrigin || r.url === FALLBACK_URL) return;
-  // Ask the page to follow the link itself, like clicking a message link inside Chat: Chat's router then jumps to
+  // Nothing more specific than the app itself (or the page the reminder was set on): just bring the tab forward.
+  if (!inApp || r.url === site.home || r.url === tab.url) return;
+  // Ask the page to follow the link itself, like clicking a message link inside the app: its router then jumps to
   // the message without reloading. If the page can't (old content script, no response), navigate the tab instead.
   try {
-    const res = await chrome.tabs.sendMessage(tab.id, { type: "gcr-navigate", url: r.url }, { frameId: 0 });
+    const res = await chrome.tabs.sendMessage(tab.id, { type: "gcr-navigate", url: r.url, id: r.id }, { frameId: 0 });
     if (!res || !res.ok) throw new Error("not handled");
   } catch (_) {
-    await chrome.tabs.update(tab.id, { url: r.url });
+    await chrome.tabs.update(tab.id, { url: RTime.webUrl(r) });
   }
 }
 
