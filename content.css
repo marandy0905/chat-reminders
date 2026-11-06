@@ -128,7 +128,7 @@
 .gcr-p-duepill { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gcr-due) 16%, transparent); color: var(--gcr-due); font-weight: 600; }
 .gcr-p-actions { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity .15s; }
 .gcr-p-row:hover .gcr-p-actions, .gcr-p-row:focus-within .gcr-p-actions { opacity: 1; }
-.gcr-p-snooze { padding: 4px 10px; font-size: 12px; font-weight: 500; }
+.gcr-p-snooze { display: flex; align-items: center; gap: 2px; padding: 4px 6px 4px 10px; font-size: 12px; font-weight: 500; }
 .gcr-p-del { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; }
 .gcr-p-del:hover { color: var(--gcr-due) !important; }
 .gcr-p-empty { display: none; padding: 28px 24px 32px; text-align: center; font-size: 13px; color: var(--gcr-muted); }

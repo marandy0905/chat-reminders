@@ -7,7 +7,64 @@ const send = (msg) =>
     return r.data;
   });
 
+let openMenu = null;
+function closeMenu() {
+  if (!openMenu) return;
+  openMenu.remove();
+  openMenu = null;
+  document.body.style.minHeight = "";
+  document.querySelectorAll("li.menu-open").forEach((li) => li.classList.remove("menu-open"));
+}
+
+// Snooze dropdown: the fixed snooze times, then a custom date/time. It hangs off the button; the popup grows to fit it.
+function snoozeMenu(r, anchor) {
+  const wasOpen = openMenu && openMenu.anchor === anchor;
+  closeMenu();
+  if (wasOpen) return;
+  const m = document.createElement("div");
+  m.className = "menu";
+  m.anchor = anchor;
+  m.addEventListener("click", (e) => e.stopPropagation());
+  const apply = async (when) => { closeMenu(); await send({ type: "snooze", id: r.id, when }); render(); };
+  const now = Date.now();
+  for (const p of RTime.snoozePresets()) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "item";
+    const hint = document.createElement("span");
+    hint.className = "hint";
+    hint.textContent = RTime.formatTime(p.at(now));
+    b.append(p.label, hint);
+    b.addEventListener("click", () => apply(p.at(Date.now())));
+    m.appendChild(b);
+  }
+  const sub = document.createElement("div");
+  sub.className = "sub";
+  sub.textContent = RTime.t("custom_time");
+  const picker = RTime.createPicker(now + 3600e3);
+  const go = document.createElement("button");
+  go.type = "button";
+  go.className = "go";
+  go.textContent = RTime.t("set_custom");
+  go.addEventListener("click", () => {
+    const when = picker.get();
+    if (Number.isFinite(when)) apply(when);
+  });
+  m.append(document.createElement("hr"), sub, picker.el, go);
+  document.body.appendChild(m);
+  openMenu = m;
+  anchor.closest("li").classList.add("menu-open");
+  const a = anchor.getBoundingClientRect();
+  m.style.top = `${a.bottom + window.scrollY + 4}px`;
+  m.style.left = `${Math.max(8, a.right - m.offsetWidth)}px`;
+  document.body.style.minHeight = `${a.bottom + window.scrollY + 4 + m.offsetHeight + 12}px`;
+}
+document.addEventListener("click", closeMenu);
+document.addEventListener("keydown", (e) => e.key === "Escape" && closeMenu());
+$("list").addEventListener("scroll", closeMenu);
+
 async function render() {
+  closeMenu();
   const items = (await send({ type: "list" })).filter((r) => !r.done).sort((x, y) => x.when - y.when);
   const ul = $("list");
   ul.replaceChildren();
@@ -66,7 +123,13 @@ async function render() {
     del.appendChild(RTime.icon("close", 16));
     const actions = document.createElement("div");
     actions.className = "actions";
-    actions.append(mk(RTime.t("snooze_10"), RTime.t("snooze_10_title"), () => send({ type: "snooze", id: r.id, ms: 10 * 60e3 }), "snooze"), del);
+    const snooze = document.createElement("button");
+    snooze.type = "button";
+    snooze.className = "snooze";
+    snooze.setAttribute("aria-haspopup", "menu");
+    snooze.append(RTime.t("snooze"), RTime.icon("caret", 14));
+    snooze.addEventListener("click", (e) => { e.stopPropagation(); snoozeMenu(r, snooze); });
+    actions.append(snooze, del);
 
     li.title = RTime.t("open_msg");
     li.addEventListener("click", () => send({ type: "open", id: r.id }));

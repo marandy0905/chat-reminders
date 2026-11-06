@@ -2,7 +2,7 @@
 (function (root) {
   const MIN = 60 * 1000;
 
-  // Quick options shown in the reminder menu and the snooze menu. Users edit them in the reminder menu itself; they are
+  // Quick options shown in the reminder menu. Users edit them in the reminder menu itself; they are
   // stored as data: { kind: "in", minutes } or { kind: "tomorrow", time: "HH:MM" }.
   const DEFAULT_PRESETS = [
     { kind: "in", minutes: 20 },
@@ -12,6 +12,8 @@
     { kind: "tomorrow", time: "10:00" },
   ];
   const MAX_PRESETS = 8;
+  // Fixed choices in every Snooze dropdown (a custom time is always offered below them).
+  const SNOOZE_PRESETS = [10, 30, 60, 180].map((minutes) => ({ kind: "in", minutes }));
   const MAX_MINUTES = 30 * 24 * 60;
 
   // Validate and normalise stored options: drop junk, clamp, cap the count, "from now" ascending then "tomorrow" ascending.
@@ -44,6 +46,8 @@
       return { label: durationLabel(o.minutes), at: (now) => now + o.minutes * MIN };
     });
   }
+
+  const snoozePresets = () => buildPresets(SNOOZE_PRESETS);
 
   const loadPresets = () => chrome.storage.local.get("presets").then((o) => buildPresets(o.presets));
 
@@ -176,8 +180,6 @@
       empty_hint: "Hover a message in Google Chat and click the clock to add a reminder.",
       mark_done: "Mark as done",
       del: "Delete",
-      snooze_10: "Snooze 10m",
-      snooze_10_title: "Snooze 10 minutes",
       open_msg: "Open this message in Chat",
       due: "Due",
       sub_due: "{due} due · {total} total",
@@ -264,8 +266,6 @@
       empty_hint: "將滑鼠移到 Google Chat 的訊息上，點選時鐘按鈕即可新增提醒。",
       mark_done: "標示為完成",
       del: "刪除",
-      snooze_10: "延後 10 分鐘",
-      snooze_10_title: "延後 10 分鐘",
       open_msg: "在 Chat 中開啟這則訊息",
       due: "已到期",
       sub_due: "{due} 則已到期 · 共 {total} 則",
@@ -359,6 +359,6 @@
     return s.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
   }
 
-  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
+  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);
