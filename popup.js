@@ -27,6 +27,15 @@ function snoozeMenu(r, anchor) {
   m.addEventListener("click", (e) => e.stopPropagation());
   const apply = async (when) => { closeMenu(); await send({ type: "snooze", id: r.id, when }); render(); };
   const now = Date.now();
+  // A timed reminder can drop its time and become a todo.
+  if (!RTime.isTodo(r)) {
+    const todo = document.createElement("button");
+    todo.type = "button";
+    todo.className = "item";
+    todo.textContent = RTime.t("add_todo");
+    todo.addEventListener("click", async () => { closeMenu(); await send({ type: "todo", id: r.id }); render(); });
+    m.append(todo, document.createElement("hr"));
+  }
   for (const p of RTime.snoozePresets()) {
     const b = document.createElement("button");
     b.type = "button";
@@ -65,13 +74,15 @@ $("list").addEventListener("scroll", closeMenu);
 
 async function render() {
   closeMenu();
-  const items = (await send({ type: "list" })).filter((r) => !r.done).sort((x, y) => x.when - y.when);
+  const active = (await send({ type: "list" })).filter((r) => !r.done).sort(RTime.byWhen);
+  const filter = await RTime.loadFilter();
+  $("filter").replaceChildren(RTime.createFilterBar(filter, (key) => RTime.saveFilter(key).then(render), active));
+  $("filter").hidden = !active.length;
+  const items = active.filter((r) => RTime.matchesFilter(r, filter));
   const ul = $("list");
   ul.replaceChildren();
-  $("empty").style.display = items.length ? "none" : "block";
+  $("empty").style.display = active.length ? "none" : "block";
   const now = Date.now();
-  const dueCount = items.filter((r) => r.when <= now).length;
-  $("sub").textContent = !items.length ? "" : dueCount ? RTime.t("sub_due", { due: dueCount, total: items.length }) : RTime.t("sub_up", { n: items.length });
   for (const r of items) {
     const li = document.createElement("li");
     const t = document.createElement("div");
@@ -93,15 +104,22 @@ async function render() {
     chip.textContent = site.short;
     chip.style.setProperty("--site", site.color);
     meta.append(chip);
-    if (r.when <= now) {
-      const due = document.createElement("span");
-      due.className = "due";
-      due.textContent = RTime.t("due");
-      meta.append(due);
+    if (RTime.isTodo(r)) {
+      const todo = document.createElement("span");
+      todo.className = "todo";
+      todo.textContent = RTime.t("todo");
+      meta.append(todo);
+    } else {
+      if (RTime.isDue(r, now)) {
+        const due = document.createElement("span");
+        due.className = "due";
+        due.textContent = RTime.t("due");
+        meta.append(due);
+      }
+      const when = document.createElement("span");
+      when.textContent = RTime.formatDue(r.when, now);
+      meta.append(when);
     }
-    const when = document.createElement("span");
-    when.textContent = RTime.formatWhen(r.when);
-    meta.append(when);
     t.append(b, meta);
 
     const check = document.createElement("input");
@@ -133,7 +151,8 @@ async function render() {
     snooze.type = "button";
     snooze.className = "snooze";
     snooze.setAttribute("aria-haspopup", "menu");
-    snooze.append(RTime.t("snooze"), RTime.icon("caret", 14));
+    // A todo has no time to move, so the same menu gives it one instead.
+    snooze.append(RTime.t(RTime.isTodo(r) ? "set_reminder" : "snooze"), RTime.icon("caret", 14));
     snooze.addEventListener("click", (e) => { e.stopPropagation(); snoozeMenu(r, snooze); });
     actions.append(snooze, del);
 

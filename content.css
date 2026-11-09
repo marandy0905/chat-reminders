@@ -122,8 +122,6 @@
 .gcr-panel.gcr-open { opacity: 1; transform: none; }
 .gcr-p-head { display: flex; align-items: flex-end; justify-content: space-between; padding: 18px 20px 10px; }
 .gcr-p-title { font-size: 22px; line-height: 1.1; font-weight: 700; letter-spacing: -.02em; }
-.gcr-p-sub { margin-top: 3px; font-size: 12px; color: var(--gcr-muted); }
-.gcr-p-sub:empty { display: none; }
 .gcr-panel button { border: 0; background: none; color: var(--gcr-muted); font: inherit; cursor: pointer; border-radius: 999px; transition: background .15s, color .15s, transform .12s; }
 .gcr-panel button:hover { background: var(--gcr-hover); color: var(--gcr-fg); }
 .gcr-panel button:active { transform: scale(.94); }
@@ -142,6 +140,11 @@
 .gcr-p-meta { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 12px; color: var(--gcr-muted); }
 .gcr-p-site { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gcr-site) 16%, transparent); color: color-mix(in srgb, var(--gcr-site) 70%, var(--gcr-fg)); font-weight: 600; }
 .gcr-p-duepill { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gcr-due) 16%, transparent); color: var(--gcr-due); font-weight: 600; }
+.gcr-panel .gcr-p-filter[hidden] { display: none; }
+.gcr-panel .rt-filter { display: flex; gap: 6px; padding: 0 20px 8px; }
+.gcr-panel .rt-filter button { padding: 4px 11px; font-size: 12px; border-radius: 999px; color: var(--gcr-muted); background: var(--gcr-hover); }
+.gcr-panel .rt-filter button.rt-filter-on { color: var(--gcr-bg); background: #4c9bff; }
+.gcr-p-todopill { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--gcr-muted) 16%, transparent); color: var(--gcr-fg); font-weight: 600; }
 .gcr-p-actions { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity .15s; }
 .gcr-p-row:hover .gcr-p-actions, .gcr-p-row:focus-within .gcr-p-actions { opacity: 1; }
 .gcr-p-snooze { display: flex; align-items: center; gap: 2px; padding: 4px 6px 4px 10px; font-size: 12px; font-weight: 500; }

@@ -16,6 +16,9 @@ li.done .t b { text-decoration: line-through; color: var(--muted); }
 button { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; color: var(--fg); font: inherit; cursor: pointer; }
 button:hover { background: var(--hover); }
 button.danger:hover { color: var(--danger); }
+.rt-filter { display: flex; gap: 6px; }
+.rt-filter button { border-radius: 999px; padding: 4px 12px; }
+.rt-filter button.rt-filter-on { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 .menu { position: absolute; right: 6px; top: calc(100% - 4px); z-index: 10; width: 220px; padding: 6px 0; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.3); }
 .menu > button { display: block; width: 100%; border: 0; border-radius: 0; text-align: left; padding: 7px 14px; }
@@ -24,6 +27,7 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .menu input, .menu select { padding: 5px 6px; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; font: inherit; }
 .menu .go { margin: 0 14px 6px; width: calc(100% - 28px); }
 #filters { display: flex; flex-wrap: wrap; gap: 6px; }
+#filters:not(:empty) + #filter { margin-top: 8px; }
 #filters button { border-radius: 999px; padding: 4px 12px; }
 #filters button.on { background: var(--site, var(--accent)); border-color: var(--site, var(--accent)); color: #fff; }
 .t i.site { display: inline-block; margin-right: 6px; padding: 0 7px; border-radius: 999px; font-style: normal; font-size: 12px; font-weight: 600;
