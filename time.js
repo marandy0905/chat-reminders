@@ -117,6 +117,24 @@
   }
   const siteOf = (r) => (r && Object.prototype.hasOwnProperty.call(SITES, r.site) ? r.site : "gchat");
 
+  // Which message a reminder is on: its site plus the id the site's content script stored, or (Chat) the id in the
+  // link. "" when it isn't tied to a message (space/DM links, manual reminders).
+  const messageOf = (r) => {
+    const id = r && (r.key || messageIdOf(r.url));
+    return id ? `${siteOf(r)}:${id}` : "";
+  };
+
+  // Ids of the active (not done) reminders on the same message as `target` ({ site, key, url }), earliest first. A
+  // message gets at most one active reminder, so these are what a new one replaces. Untied ones never match.
+  function activeForMessage(reminders, target) {
+    const msg = messageOf(target);
+    if (!msg) return [];
+    return Object.values(reminders || {})
+      .filter((r) => !r.done && messageOf(r) === msg)
+      .sort((a, b) => a.when - b.when)
+      .map((r) => r.id);
+  }
+
   // Labels for messages with an active reminder on one site: { messageKey: { text, overdue, ids } }, nearest
   // reminder per message. The key is the one the site's content script stored, or (Chat) the id in the link.
   function reminderLabels(reminders, now, fmt = formatWhen, site = "gchat") {
@@ -391,6 +409,6 @@
     return s.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
   }
 
-  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, SITES, siteOf, webUrl, reminderLabels, ceilQuarter, createPicker };
+  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, SITES, siteOf, webUrl, activeForMessage, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);
