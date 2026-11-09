@@ -44,15 +44,19 @@ const labels = T.reminderLabels(
     c: { when: now - 60e3, url: link("msgBBBBBBBB") },
     d: { when: now + 60e3, url: link("msgCCCCCCCC"), done: now },
     e: { when: now + 60e3, url: "https://chat.google.com/app/chat/sJEKDqAAAAE" },
+    f: { when: now + 4 * 3600e3, url: link("msgDDDDDDDD") },
   },
   now,
   fmt
 );
 assert.deepStrictEqual(labels, {
-  msgAAAAAAAA: { text: `Reminder set for @${now + 30e3}`, overdue: false, ids: ["a", "b"] },
+  msgAAAAAAAA: { text: "Due in 1 minute", overdue: false, ids: ["a", "b"] },
   msgBBBBBBBB: { text: `Reminder due @${now - 60e3}`, overdue: true, ids: ["c"] },
+  msgDDDDDDDD: { text: `Reminder set for @${now + 4 * 3600e3}`, overdue: false, ids: ["f"] },
 });
 assert.deepStrictEqual(T.reminderLabels({}, now, fmt), {});
+// Without a formatter, labels further out than 3 hours use the same "Tomorrow 10:00" wording as the lists.
+assert.strictEqual(T.reminderLabels({ x: { when: T.tomorrowAt(now, 10), url: link("msgXXXXXXXX") } }, now).msgXXXXXXXX.text, "Reminder set for Tomorrow 10:00");
 
 // Sites: old reminders (no site) are Chat; labels only cover the asked site and prefer the stored key.
 assert.strictEqual(T.siteOf({}), "gchat");
@@ -65,7 +69,7 @@ const mixed = {
 };
 assert.deepStrictEqual(Object.keys(T.reminderLabels(mixed, now, fmt)), ["msgAAAAAAAA"]);
 assert.deepStrictEqual(T.reminderLabels(mixed, now, fmt, "slack"), {
-  "1700000000.123456": { text: `Reminder set for @${now + 60e3}`, overdue: false, ids: ["s"] },
+  "1700000000.123456": { text: "Due in 1 minute", overdue: false, ids: ["s"] },
 });
 assert.strictEqual(T.reminderLabels(mixed, now, fmt, "teams")["1700000000000"].overdue, true);
 assert.ok(T.SITES.slack.hosts.test("acme.slack.com") && !T.SITES.slack.hosts.test("slack.com.evil.io"));
@@ -100,7 +104,7 @@ assert.strictEqual(T.webUrl({ url: "https://chat.google.com/room/a/b/c" }), "htt
   assert.strictEqual(sorted.filter((r) => T.matchesFilter(r, "all")).length, 4);
   assert.strictEqual(sorted.filter((r) => T.matchesFilter(r, "junk")).length, 4);
   // A timed reminder on the same message wins over the todo.
-  assert.strictEqual(T.reminderLabels({ t: { ...todo, url: link("msgTTTTTTTT") }, u: { id: "u", when: now + 60e3, url: link("msgTTTTTTTT") } }, now, fmt).msgTTTTTTTT.text, `Reminder set for @${now + 60e3}`);
+  assert.strictEqual(T.reminderLabels({ t: { ...todo, url: link("msgTTTTTTTT") }, u: { id: "u", when: now + 60e3, url: link("msgTTTTTTTT") } }, now, fmt).msgTTTTTTTT.text, "Due in 1 minute");
 }
 assert.ok(T.compareVersions("1.10.0", "1.9.2") > 0);
 assert.ok(T.compareVersions("1.0.0", "1.0.1") < 0);
@@ -130,5 +134,31 @@ assert.strictEqual(T.compareVersions("1.0", "1.0.0"), 0);
   const slack = { s: { id: "s", when: 1, site: "slack", key: "C1/1700.1", url: "https://x.slack.com/archives/C1/p1" } };
   assert.deepStrictEqual(T.activeForMessage(slack, { site: "slack", key: "C1/1700.1" }), ["s"]);
   assert.deepStrictEqual(T.activeForMessage(slack, { site: "teams", key: "C1/1700.1" }), []);
+}
+// List times: relative within 3 hours ("Due in N minutes" under an hour, "Due in N hours" up to 3), absolute otherwise.
+{
+  const n0 = new Date(2026, 9, 29, 12, 0).getTime();
+  const M = 60e3;
+  assert.strictEqual(T.formatDue(n0 + 1 * M, n0), "Due in 1 minute");
+  assert.strictEqual(T.formatDue(n0 + 30 * M - 1000, n0), "Due in 30 minutes");
+  assert.strictEqual(T.formatDue(n0 + 59 * M, n0), "Due in 59 minutes");
+  assert.strictEqual(T.formatDue(n0 + 60 * M, n0), "Due in 1 hour");
+  assert.strictEqual(T.formatDue(n0 + 100 * M, n0), "Due in 2 hours");
+  assert.strictEqual(T.formatDue(n0 + 180 * M, n0), "Due in 3 hours");
+  // Beyond that, today, tomorrow and yesterday read as words; other days keep the full date.
+  assert.strictEqual(T.formatDue(n0 + 181 * M, n0), "Today 15:01");
+  assert.strictEqual(T.formatDue(n0 - M, n0), "Today 11:59");
+  assert.strictEqual(T.formatDue(new Date(2026, 9, 30, 10, 0).getTime(), n0), "Tomorrow 10:00");
+  assert.strictEqual(T.formatDue(new Date(2026, 9, 28, 18, 15).getTime(), n0), "Yesterday 18:15");
+  assert.strictEqual(T.formatDue(new Date(2026, 9, 31, 10, 0).getTime(), n0), "2026/10/31 10:00");
+  assert.strictEqual(T.formatDay(new Date(2026, 9, 30, 0, 5).getTime(), new Date(2026, 9, 29, 23, 50).getTime()), "Tomorrow 00:05");
+  assert.strictEqual(T.formatDay(new Date(2026, 10, 1, 9, 0).getTime(), new Date(2026, 9, 31, 12, 0).getTime()), "Tomorrow 09:00");
+  T.setLang("zh-TW");
+  assert.strictEqual(T.formatDue(n0 + 30 * M, n0), "30 分鐘後到期");
+  assert.strictEqual(T.formatDue(n0 + 120 * M, n0), "2 小時後到期");
+  assert.strictEqual(T.formatDue(new Date(2026, 9, 30, 10, 0).getTime(), n0), "明天 10:00");
+  assert.strictEqual(T.formatDue(new Date(2026, 9, 28, 18, 15).getTime(), n0), "昨天 18:15");
+  assert.strictEqual(T.formatDue(n0 - M, n0), "今天 11:59");
+  T.setLang("en");
 }
 console.log("ok");

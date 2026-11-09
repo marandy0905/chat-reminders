@@ -89,8 +89,8 @@ function row(r) {
   chip.style.setProperty("--site", site.color);
   const s = document.createElement("span");
   s.textContent = r.done
-    ? RTime.t("completed_at", { when: RTime.formatWhen(r.done) })
-    : (RTime.isTodo(r) ? RTime.t("todo") : RTime.formatWhen(r.when)) + (r.source === "message" ? ` · ${RTime.t("from_message")}` : "");
+    ? RTime.t("completed_at", { when: RTime.formatDay(r.done, Date.now()) })
+    : (RTime.isTodo(r) ? RTime.t("todo") : RTime.formatDue(r.when, Date.now())) + (r.source === "message" ? ` · ${RTime.t("from_message")}` : "");
   t.append(b, chip, s);
   li.appendChild(t);
   li.title = RTime.t("open_msg");

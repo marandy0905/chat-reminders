@@ -120,7 +120,7 @@ async function remindAt(row, when) {
     const { text, sender } = GCRSite.extract(row);
     const key = GCRSite.messageKey ? GCRSite.messageKey(row) : undefined;
     await send({ type: "add", text: text.slice(0, SNIPPET_LEN), sender, when, url: GCRSite.permalink(row), source: "message", site: GCRSite.id, key });
-    toast(when == null ? RTime.t("toast_todo") : RTime.t("toast_set", { when: RTime.formatWhen(when) }));
+    toast(when == null ? RTime.t("toast_todo") : RTime.t("toast_set", { when: RTime.formatDay(when, Date.now()) }));
   } catch (e) {
     toast(RTime.t("toast_fail"));
   }
@@ -704,7 +704,7 @@ if (window.top === window) {
       if (RTime.isTodo(r)) meta.append(el("span", "gcr-p-todopill", RTime.t("todo")));
       else {
         if (RTime.isDue(r, now)) meta.append(el("span", "gcr-p-duepill", RTime.t("due")));
-        meta.append(el("span", null, RTime.formatWhen(r.when)));
+        meta.append(el("span", null, RTime.formatDue(r.when, now)));
       }
       body.append(meta);
       const actions = el("div", "gcr-p-actions");

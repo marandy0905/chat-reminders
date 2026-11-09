@@ -82,6 +82,28 @@
     return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${formatTime(ms)}`;
   }
 
+  // When a reminder is due, for the lists: "Due in N minutes" under an hour, "Due in N hours" (rounded) up to
+  // RELATIVE_MAX_MIN, the absolute date/time otherwise (including once it's overdue).
+  const RELATIVE_MAX_MIN = 180;
+  // "Today 15:00" / "Tomorrow 10:00" / "Yesterday 18:15" when `when` falls on that day relative to `now`; the full
+  // date otherwise.
+  function formatDay(when, now) {
+    const day = (ms) => { const d = new Date(ms); return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / (24 * 60 * MIN); };
+    const diff = day(when) - day(now);
+    if (diff === 0) return t("today_at", { time: formatTime(when) });
+    if (diff === 1) return t("tomorrow_at", { time: formatTime(when) });
+    if (diff === -1) return t("yesterday_at", { time: formatTime(when) });
+    return formatWhen(when);
+  }
+
+  function formatDue(when, now) {
+    const min = Math.ceil((when - now) / MIN);
+    if (min <= 0 || min > RELATIVE_MAX_MIN) return formatDay(when, now);
+    if (min < 60) return t(min === 1 ? "due_in_min_one" : "due_in_min_other", { n: min });
+    const hr = Math.round(min / 60);
+    return t(hr === 1 ? "due_in_hr_one" : "due_in_hr_other", { n: hr });
+  }
+
   // Chat message id from a reminder's saved link (/room/<space>/<topic>/<message>), or "" for a space/DM link.
   function messageIdOf(url) {
     const m = /\/room\/[^/]+\/[^/]+\/([A-Za-z0-9_-]{8,16})(?:[?#]|$)/.exec(url || "");
@@ -174,7 +196,7 @@
 
   // Labels for messages with an active reminder on one site: { messageKey: { text, overdue, ids } }, nearest
   // reminder per message. The key is the one the site's content script stored, or (Chat) the id in the link.
-  function reminderLabels(reminders, now, fmt = formatWhen, site = "gchat") {
+  function reminderLabels(reminders, now, fmt = (ms) => formatDay(ms, now), site = "gchat") {
     const nearest = {};
     const ids = {};
     for (const [key, r] of Object.entries(reminders || {})) {
@@ -186,7 +208,9 @@
     const out = {};
     for (const [id, r] of Object.entries(nearest)) {
       const overdue = isDue(r, now);
-      const text = isTodo(r) ? t("label_todo") : t(overdue ? "label_due" : "label_set", { when: fmt(r.when) });
+      // Due soon: same "Due in N minutes/hours" as the lists (content.js re-renders labels every minute).
+      const soon = !isTodo(r) && !overdue && r.when - now <= RELATIVE_MAX_MIN * MIN;
+      const text = isTodo(r) ? t("label_todo") : soon ? formatDue(r.when, now) : t(overdue ? "label_due" : "label_set", { when: fmt(r.when) });
       out[id] = { text, overdue, ids: ids[id] };
     }
     return out;
@@ -314,7 +338,13 @@
       in_hr_other: "In {n} hours",
       in_day_one: "In {n} day",
       in_day_other: "In {n} days",
+      due_in_min_one: "Due in {n} minute",
+      due_in_min_other: "Due in {n} minutes",
+      due_in_hr_one: "Due in {n} hour",
+      due_in_hr_other: "Due in {n} hours",
       tomorrow_at: "Tomorrow {time}",
+      yesterday_at: "Yesterday {time}",
+      today_at: "Today {time}",
       edit: "Edit",
       done: "Done",
       opt_from_now: "From now",
@@ -407,7 +437,13 @@
       in_hr_other: "{n} 小時後",
       in_day_one: "{n} 天後",
       in_day_other: "{n} 天後",
+      due_in_min_one: "{n} 分鐘後到期",
+      due_in_min_other: "{n} 分鐘後到期",
+      due_in_hr_one: "{n} 小時後到期",
+      due_in_hr_other: "{n} 小時後到期",
       tomorrow_at: "明天 {time}",
+      yesterday_at: "昨天 {time}",
+      today_at: "今天 {time}",
       edit: "編輯",
       done: "完成",
       opt_from_now: "從現在起",
@@ -459,6 +495,6 @@
     return s.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
   }
 
-  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, SITES, siteOf, webUrl, activeForMessage, othersForMessage, isTodo, isDue, byWhen, LIST_FILTERS, matchesFilter, loadFilter, saveFilter, createFilterBar, reminderLabels, ceilQuarter, createPicker };
+  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatDay, formatDue, formatTime, messageIdOf, SITES, siteOf, webUrl, activeForMessage, othersForMessage, isTodo, isDue, byWhen, LIST_FILTERS, matchesFilter, loadFilter, saveFilter, createFilterBar, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);
