@@ -10,12 +10,13 @@ async function load() {
 const save = (r) => chrome.storage.local.set({ [KEY]: r });
 
 function schedule(r) {
+  if (RTime.isTodo(r)) return; // todos have no time, so nothing to fire
   // Past-due times fire almost immediately.
   chrome.alarms.create(r.id, { when: Math.max(r.when, Date.now() + 1000) });
 }
 
-// A message has at most one active reminder: setting another one moves the existing reminder to the new time
-// (and drops any extra copies left from before this rule).
+// A message has at most one active reminder or todo: setting another one moves the existing one to the new time, or
+// turns it into a todo (and drops any extra copies left from before this rule).
 async function add({ text, sender, when, url, source, site, key }) {
   site = RTime.siteOf({ site });
   const all = await load();
@@ -24,10 +25,11 @@ async function add({ text, sender, when, url, source, site, key }) {
     id: keep || `r_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     text: String(text || "Reminder").slice(0, 500),
     sender: String(sender || "").slice(0, 100),
-    when,
+    when: Number.isFinite(when) ? when : null, // null: a todo
     url: url || RTime.SITES[site].home,
     source: source || "manual",
     site,
+    created: Date.now(),
   };
   // The message's id on its site, for the label on the message (Chat derives it from the link instead).
   if (key) r.key = String(key).slice(0, 200);
@@ -36,7 +38,8 @@ async function add({ text, sender, when, url, source, site, key }) {
   await save(all);
   schedule(r);
   await Promise.all([r.id, ...extra].map((id) => chrome.notifications.clear(id)));
-  await Promise.all(extra.map((id) => chrome.alarms.clear(id)));
+  // A todo has no alarm of its own, so the one left from the reminder it replaced goes too.
+  await Promise.all((RTime.isTodo(r) ? [r.id, ...extra] : extra).map((id) => chrome.alarms.clear(id)));
   return r;
 }
 
@@ -48,15 +51,35 @@ async function remove(id) {
   await chrome.notifications.clear(id);
 }
 
-// Move a reminder to a new time (also reactivates a completed one). Pass `when` (epoch ms) or `ms` (from now).
+// Move a reminder to a new time (also reactivates a completed one, replacing any other active one on its message). Pass `when` (epoch ms) or `ms` (from now).
 async function snooze(id, { when, ms } = {}) {
   const all = await load();
   if (!all[id]) return;
+  const extra = RTime.othersForMessage(all, id);
   all[id].when = Number.isFinite(when) ? when : Date.now() + (ms || SNOOZE_MS);
   delete all[id].done;
+  extra.forEach((x) => delete all[x]);
   await save(all);
   schedule(all[id]);
-  await chrome.notifications.clear(id);
+  await clearAll([id, ...extra], extra);
+}
+
+// Turn a reminder into a todo (no time): also reactivates a completed one, replacing any other active one on its message.
+async function toTodo(id) {
+  const all = await load();
+  if (!all[id]) return;
+  const extra = RTime.othersForMessage(all, id);
+  all[id].when = null;
+  delete all[id].done;
+  extra.forEach((x) => delete all[x]);
+  await save(all);
+  await clearAll([id, ...extra], [id, ...extra]);
+}
+
+// Clears the notifications of `notes` and the alarms of `alarms`.
+async function clearAll(notes, alarms) {
+  await Promise.all(notes.map((x) => chrome.notifications.clear(x)));
+  await Promise.all(alarms.map((x) => chrome.alarms.clear(x)));
 }
 
 // Mark done: kept in the overview under "Completed" until deleted.
@@ -70,7 +93,7 @@ async function complete(id) {
 }
 
 async function list() {
-  return Object.values(await load()).sort((a, b) => a.when - b.when);
+  return Object.values(await load()).sort(RTime.byWhen);
 }
 
 async function resync() {
@@ -85,7 +108,7 @@ chrome.runtime.onStartup.addListener(resync);
 chrome.alarms.onAlarm.addListener(async ({ name }) => {
   if (name === UPDATE_ALARM) return checkUpdate();
   const r = (await load())[name];
-  if (!r || r.done) return;
+  if (!r || r.done || RTime.isTodo(r)) return;
   chrome.notifications.create(r.id, {
     type: "basic",
     iconUrl: "icons/icon128.png",
@@ -230,6 +253,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     delete: () => remove(msg.id),
     snooze: () => snooze(msg.id, msg),
     complete: () => complete(msg.id),
+    todo: () => toTodo(msg.id),
     popup: () => openPopup(),
     overview: () => openOverview(),
     openUpdate: () => openUpdate(),

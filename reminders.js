@@ -17,13 +17,15 @@ function startOfDay(ms) {
 
 function sectionOf(r, now) {
   if (r.done) return "Completed";
+  if (RTime.isTodo(r)) return "Todo";
   if (r.when <= now) return "Overdue";
   const today = startOfDay(now);
   if (r.when < today + DAY) return "Today";
   if (r.when < today + 2 * DAY) return "Tomorrow";
   return "Later";
 }
-const ORDER = ["Overdue", "Today", "Tomorrow", "Later", "Completed"];
+const ORDER = ["Overdue", "Today", "Tomorrow", "Later", "Todo", "Completed"];
+
 
 let openMenu = null;
 function closeMenu() {
@@ -49,6 +51,11 @@ function snoozeMenu(r, li) {
   m.className = "menu";
   m.addEventListener("click", (e) => e.stopPropagation());
   const apply = (when) => { closeMenu(); send({ type: "snooze", id: r.id, when }); };
+  // A completed reminder can come back as a todo, and a timed one can drop its time; an active todo already is one.
+  if (r.done || !RTime.isTodo(r)) {
+    m.appendChild(btn(RTime.t("add_todo"), "", () => { closeMenu(); send({ type: "todo", id: r.id }); }));
+    m.appendChild(document.createElement("hr"));
+  }
   presets.forEach((p) => m.appendChild(btn(p.label, "", () => apply(p.at(Date.now())))));
   m.appendChild(document.createElement("hr"));
   const picker = RTime.createPicker(Date.now() + 3600e3);
@@ -83,7 +90,7 @@ function row(r) {
   const s = document.createElement("span");
   s.textContent = r.done
     ? RTime.t("completed_at", { when: RTime.formatWhen(r.done) })
-    : RTime.formatWhen(r.when) + (r.source === "message" ? ` · ${RTime.t("from_message")}` : "");
+    : (RTime.isTodo(r) ? RTime.t("todo") : RTime.formatWhen(r.when)) + (r.source === "message" ? ` · ${RTime.t("from_message")}` : "");
   t.append(b, chip, s);
   li.appendChild(t);
   li.title = RTime.t("open_msg");
@@ -95,7 +102,8 @@ function row(r) {
     s.append(text, RTime.icon(name, 16));
     return s;
   };
-  li.appendChild(btn(r.done ? RTime.t("reactivate") : withIcon(RTime.t("snooze"), "caret"), "", () => snoozeMenu(r, li)));
+  const timeLabel = RTime.isTodo(r) ? RTime.t("set_reminder") : RTime.t("snooze");
+  li.appendChild(btn(r.done ? RTime.t("reactivate") : withIcon(timeLabel, "caret"), "", () => snoozeMenu(r, li)));
   if (!r.done) li.appendChild(btn(withIcon(RTime.t("mark_done"), "check"), "", () => send({ type: "complete", id: r.id })));
   li.appendChild(btn(RTime.icon("close", 16), "danger icon", () => send({ type: "delete", id: r.id }), RTime.t("del")));
   return li;
@@ -127,7 +135,11 @@ async function render() {
   closeMenu();
   const all = await send({ type: "list" });
   renderFilters(all);
-  const items = filter === "all" ? all : all.filter((r) => RTime.siteOf(r) === filter);
+  const bySite = filter === "all" ? all : all.filter((r) => RTime.siteOf(r) === filter);
+  // Second row: All / Scheduled / To-do, shared with the popup and the in-page panel.
+  const kind = await RTime.loadFilter();
+  document.getElementById("filter").replaceChildren(RTime.createFilterBar(kind, RTime.saveFilter, bySite));
+  const items = bySite.filter((r) => RTime.matchesFilter(r, kind));
   const now = Date.now();
   const groups = {};
   items.forEach((r) => (groups[sectionOf(r, now)] ||= []).push(r));
@@ -135,7 +147,7 @@ async function render() {
 
   const root = document.getElementById("sections");
   root.replaceChildren();
-  document.getElementById("empty").style.display = items.length ? "none" : "block";
+  document.getElementById("empty").style.display = all.length ? "none" : "block";
   for (const name of ORDER) {
     if (!groups[name]) continue;
     const h = document.createElement("h2");

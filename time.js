@@ -117,6 +117,39 @@
   }
   const siteOf = (r) => (r && Object.prototype.hasOwnProperty.call(SITES, r.site) ? r.site : "gchat");
 
+  // A todo is a reminder without a time: it never fires and is never due.
+  const isTodo = (r) => !Number.isFinite(r && r.when);
+  const isDue = (r, now) => !r.done && !isTodo(r) && r.when <= now;
+  // Sort order for lists: timed reminders soonest first, then todos oldest first.
+  function byWhen(a, b) {
+    if (isTodo(a) || isTodo(b)) return isTodo(a) - isTodo(b) || (a.created || 0) - (b.created || 0);
+    return a.when - b.when;
+  }
+
+  // List filters shared by the popup, the in-Chat panel and the overview. The choice is kept in storage so all three
+  // show the same thing.
+  const LIST_FILTERS = ["all", "timed", "todo"];
+  const matchesFilter = (r, key) => (key === "timed" ? !isTodo(r) : key === "todo" ? isTodo(r) : true);
+  const loadFilter = () =>
+    chrome.storage.local.get("listFilter").then((o) => (LIST_FILTERS.includes(o.listFilter) ? o.listFilter : "all"), () => "all");
+  const saveFilter = (key) => chrome.storage.local.set({ listFilter: key });
+
+  // Row of "All (n) | Scheduled (n) | Todo (n)" buttons, counted over `items`; onPick(key) when one is clicked.
+  function createFilterBar(current, onPick, items = []) {
+    const el = document.createElement("div");
+    el.className = "rt-filter";
+    for (const key of LIST_FILTERS) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = `${t("filter_" + key)} (${items.filter((r) => matchesFilter(r, key)).length})`;
+      if (key === current) b.className = "rt-filter-on";
+      b.setAttribute("aria-pressed", String(key === current));
+      b.addEventListener("click", (e) => { e.stopPropagation(); onPick(key); });
+      el.appendChild(b);
+    }
+    return el;
+  }
+
   // Which message a reminder is on: its site plus the id the site's content script stored, or (Chat) the id in the
   // link. "" when it isn't tied to a message (space/DM links, manual reminders).
   const messageOf = (r) => {
@@ -125,15 +158,19 @@
   };
 
   // Ids of the active (not done) reminders on the same message as `target` ({ site, key, url }), earliest first. A
-  // message gets at most one active reminder, so these are what a new one replaces. Untied ones never match.
+  // message gets at most one active reminder or todo, so these are what a new one replaces. Untied ones never match.
   function activeForMessage(reminders, target) {
     const msg = messageOf(target);
     if (!msg) return [];
     return Object.values(reminders || {})
       .filter((r) => !r.done && messageOf(r) === msg)
-      .sort((a, b) => a.when - b.when)
+      .sort(byWhen)
       .map((r) => r.id);
   }
+
+  // The other active reminders on the same message as reminder `id`: what it replaces when it comes back to life.
+  const othersForMessage = (reminders, id) =>
+    reminders && reminders[id] ? activeForMessage(reminders, reminders[id]).filter((x) => x !== id) : [];
 
   // Labels for messages with an active reminder on one site: { messageKey: { text, overdue, ids } }, nearest
   // reminder per message. The key is the one the site's content script stored, or (Chat) the id in the link.
@@ -144,12 +181,13 @@
       const id = !r.done && siteOf(r) === site && (r.key || messageIdOf(r.url));
       if (!id) continue;
       (ids[id] = ids[id] || []).push(r.id || key);
-      if (!nearest[id] || r.when < nearest[id].when) nearest[id] = r;
+      if (!nearest[id] || byWhen(r, nearest[id]) < 0) nearest[id] = r;
     }
     const out = {};
     for (const [id, r] of Object.entries(nearest)) {
-      const overdue = r.when <= now;
-      out[id] = { text: t(overdue ? "label_due" : "label_set", { when: fmt(r.when) }), overdue, ids: ids[id] };
+      const overdue = isDue(r, now);
+      const text = isTodo(r) ? t("label_todo") : t(overdue ? "label_due" : "label_set", { when: fmt(r.when) });
+      out[id] = { text, overdue, ids: ids[id] };
     }
     return out;
   }
@@ -230,8 +268,6 @@
       del: "Delete",
       open_msg: "Open this message",
       due: "Due",
-      sub_due: "{due} due · {total} total",
-      sub_up: "{n} upcoming",
       remind_me: "Remind me about this",
       remind_title: "Remind me about this message",
       custom_time: "Custom time",
@@ -245,6 +281,13 @@
       view_reminders: "View reminders",
       label_set: "Reminder set for {when}",
       label_due: "Reminder due {when}",
+      label_todo: "On your todo list",
+      add_todo: "Add to todo (no time)",
+      toast_todo: "Added to your todo list",
+      todo: "Todo",
+      sec_todo: "Todo",
+      filter_timed: "Scheduled",
+      filter_todo: "To-do",
       launcher_title: "Show my reminders",
       launcher_due_one: "{n} reminder due",
       launcher_due_other: "{n} reminders due",
@@ -317,8 +360,6 @@
       del: "刪除",
       open_msg: "開啟這則訊息",
       due: "已到期",
-      sub_due: "{due} 則已到期 · 共 {total} 則",
-      sub_up: "{n} 則即將到來",
       remind_me: "提醒我這則訊息",
       remind_title: "提醒我這則訊息",
       custom_time: "自訂時間",
@@ -332,6 +373,13 @@
       view_reminders: "查看提醒",
       label_set: "已設定提醒：{when}",
       label_due: "提醒已到期：{when}",
+      label_todo: "已加入待辦",
+      add_todo: "加入待辦（不設時間）",
+      toast_todo: "已加入待辦",
+      todo: "待辦",
+      sec_todo: "待辦",
+      filter_timed: "已排程",
+      filter_todo: "待辦事項",
       launcher_title: "顯示我的提醒",
       launcher_due_one: "{n} 則提醒已到期",
       launcher_due_other: "{n} 則提醒已到期",
@@ -409,6 +457,6 @@
     return s.replace(/\{(\w+)\}/g, (_, k) => (vars && vars[k] != null ? vars[k] : ""));
   }
 
-  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, SITES, siteOf, webUrl, activeForMessage, reminderLabels, ceilQuarter, createPicker };
+  root.RTime = { t, lang, setLang, compareVersions, icon, DEFAULT_PRESETS, MAX_PRESETS, SNOOZE_PRESETS, snoozePresets, sanitizePresets, buildPresets, loadPresets, tomorrowAt, parseLocalInput, toLocalInput, formatWhen, formatTime, messageIdOf, SITES, siteOf, webUrl, activeForMessage, othersForMessage, isTodo, isDue, byWhen, LIST_FILTERS, matchesFilter, loadFilter, saveFilter, createFilterBar, reminderLabels, ceilQuarter, createPicker };
   if (typeof module !== "undefined") module.exports = root.RTime;
 })(typeof globalThis !== "undefined" ? globalThis : this);

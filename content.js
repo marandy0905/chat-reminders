@@ -120,7 +120,7 @@ async function remindAt(row, when) {
     const { text, sender } = GCRSite.extract(row);
     const key = GCRSite.messageKey ? GCRSite.messageKey(row) : undefined;
     await send({ type: "add", text: text.slice(0, SNIPPET_LEN), sender, when, url: GCRSite.permalink(row), source: "message", site: GCRSite.id, key });
-    toast(RTime.t("toast_set", { when: RTime.formatWhen(when) }));
+    toast(when == null ? RTime.t("toast_todo") : RTime.t("toast_set", { when: RTime.formatWhen(when) }));
   } catch (e) {
     toast(RTime.t("toast_fail"));
   }
@@ -189,13 +189,19 @@ const mk = (tag, cls, text) => {
   return n;
 };
 
-// Snooze dropdown for a reminder in the panel: the fixed snooze times, then a custom date/time.
-function openSnoozeMenu(anchor, onPick) {
+// Snooze dropdown for a reminder in the panel: the fixed snooze times, then a custom date/time. For a todo it sets
+// a time instead; for a timed reminder it also offers "Add to todo", which calls onPick(null).
+function openSnoozeMenu(anchor, onPick, todo) {
   newMenu();
   const head = mk("div", "gcr-menu-head");
-  head.appendChild(mk("span", null, RTime.t("snooze")));
+  head.appendChild(mk("span", null, RTime.t(todo ? "set_reminder" : "snooze")));
   menu.appendChild(head);
   const pick = (when) => { closeMenu(); onPick(when); };
+  if (!todo) {
+    const b = mk("button", "gcr-menu-item", RTime.t("add_todo"));
+    b.addEventListener("click", (e) => { e.stopPropagation(); pick(null); });
+    menu.append(b, mk("div", "gcr-menu-sep"));
+  }
   for (const p of RTime.snoozePresets()) {
     const b = mk("button", "gcr-menu-item", p.label);
     b.appendChild(mk("span", "gcr-menu-hint", RTime.formatTime(p.at(Date.now()))));
@@ -226,8 +232,11 @@ function openMenu(row, anchor) {
 
   const unitFor = (min) => (min % 1440 === 0 ? 1440 : min % 60 === 0 ? 60 : 1);
 
-  // Normal mode: the quick options, then a custom date/time.
+  // Normal mode: "add to todo" (no time), the quick options, then a custom date/time.
   const renderList = () => {
+    const todo = mk("button", "gcr-menu-item", RTime.t("add_todo"));
+    todo.addEventListener("click", (e) => { e.stopPropagation(); closeMenu(); remindAt(row, null); });
+    body.append(todo, mk("div", "gcr-menu-sep"));
     presets.forEach((p) => {
       const at = p.at(Date.now());
       const b = mk("button", "gcr-menu-item", p.label);
@@ -654,14 +663,17 @@ if (window.top === window) {
   const renderPanel = async () => {
     if (!panel || !alive()) return;
     let items;
-    try { items = (await call({ type: "list" })).filter((r) => !r.done).sort((a, b) => a.when - b.when); } catch (_) { return; }
+    let filter;
+    try { items = (await call({ type: "list" })).filter((r) => !r.done).sort(RTime.byWhen); filter = await RTime.loadFilter(); } catch (_) { return; }
     if (!panel) return;
     const now = Date.now();
-    const dueCount = items.filter((r) => r.when <= now).length;
-    panel.querySelector(".gcr-p-sub").textContent = !items.length ? "" : dueCount ? RTime.t("sub_due", { due: dueCount, total: items.length }) : RTime.t("sub_up", { n: items.length });
+    const bar = panel.querySelector(".gcr-p-filter");
+    bar.replaceChildren(RTime.createFilterBar(filter, (key) => RTime.saveFilter(key).catch(() => {}), items));
+    bar.hidden = !items.length;
     const list = panel.querySelector(".gcr-p-list");
     list.replaceChildren();
     panel.querySelector(".gcr-p-empty").style.display = items.length ? "none" : "block";
+    items = items.filter((r) => RTime.matchesFilter(r, filter));
     for (const r of items) {
       const row = el("li", "gcr-p-row");
       row.title = RTime.t("open_msg");
@@ -689,18 +701,25 @@ if (window.top === window) {
       const chip = el("span", "gcr-p-site", site.short);
       chip.style.setProperty("--gcr-site", site.color);
       meta.append(chip);
-      if (r.when <= now) meta.append(el("span", "gcr-p-duepill", RTime.t("due")));
-      meta.append(el("span", null, RTime.formatWhen(r.when)));
+      if (RTime.isTodo(r)) meta.append(el("span", "gcr-p-todopill", RTime.t("todo")));
+      else {
+        if (RTime.isDue(r, now)) meta.append(el("span", "gcr-p-duepill", RTime.t("due")));
+        meta.append(el("span", null, RTime.formatWhen(r.when)));
+      }
       body.append(meta);
       const actions = el("div", "gcr-p-actions");
-      const snooze = el("button", "gcr-p-snooze", RTime.t("snooze"));
+      const todo = RTime.isTodo(r);
+      const snooze = el("button", "gcr-p-snooze", RTime.t(todo ? "set_reminder" : "snooze"));
       snooze.type = "button";
       snooze.setAttribute("aria-haspopup", "menu");
       snooze.appendChild(RTime.icon("caret", 14));
       snooze.addEventListener("click", (e) => {
         e.stopPropagation();
         if (menu && menu.anchor === snooze) return closeMenu();
-        openSnoozeMenu(snooze, async (when) => { await call({ type: "snooze", id: r.id, when }).catch(() => {}); renderPanel(); });
+        openSnoozeMenu(snooze, async (when) => {
+          await call(when == null ? { type: "todo", id: r.id } : { type: "snooze", id: r.id, when }).catch(() => {});
+          renderPanel();
+        }, todo);
         menu.anchor = snooze;
       });
       const del = el("button", "gcr-p-del");
@@ -722,7 +741,7 @@ if (window.top === window) {
     panel.setAttribute("aria-label", RTime.t("reminders"));
     const head = el("div", "gcr-p-head");
     const titles = el("div");
-    titles.append(el("div", "gcr-p-title", RTime.t("reminders")), el("div", "gcr-p-sub"));
+    titles.append(el("div", "gcr-p-title", RTime.t("reminders")));
     const all = el("button", "gcr-p-all", RTime.t("view_all"));
     all.type = "button";
     all.addEventListener("click", () => { call({ type: "overview" }).catch(() => {}); closePanel(); });
@@ -738,7 +757,7 @@ if (window.top === window) {
       note.style.cursor = "pointer";
       note.addEventListener("click", () => { call({ type: "openUpdate" }).catch(() => {}); closePanel(); });
     }).catch(() => {});
-    panel.append(head, note, el("ul", "gcr-p-list"), empty);
+    panel.append(head, note, el("div", "gcr-p-filter"), el("ul", "gcr-p-list"), empty);
     const r = launcher.getBoundingClientRect();
     const w = Math.min(420, innerWidth - 24);
     panel.style.width = `${w}px`;
@@ -764,13 +783,14 @@ if (window.top === window) {
   const togglePanel = () => (panel ? closePanel() : openPanel());
   chrome.storage.onChanged.addListener((_c, area) => area === "local" && renderPanel());
 
-  // Red + count when something is due; faded otherwise (future reminders don't count).
+  // Red + count of due ones when something is due; otherwise the count of open reminders and todos, unhighlighted.
   const refresh = () => {
     if (!alive()) return shutdown();
     return chrome.storage.local.get("reminders").then((o) => {
       const now = Date.now();
-      const due = Object.values(o.reminders || {}).filter((r) => !r.done && r.when <= now).length;
-      badge.textContent = due ? String(due) : "";
+      const open = Object.values(o.reminders || {}).filter((r) => !r.done);
+      const due = open.filter((r) => RTime.isDue(r, now)).length;
+      badge.textContent = due ? String(due) : open.length ? String(open.length) : "";
       launcher.classList.toggle("gcr-due", due > 0);
       launcher.title = due ? RTime.t(due > 1 ? "launcher_due_other" : "launcher_due_one", { n: due }) : RTime.t("launcher_title");
     }).catch(() => {});

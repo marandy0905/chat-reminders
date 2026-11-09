@@ -79,6 +79,29 @@ assert.strictEqual(T.webUrl({ site: "teams", url: "https://teams.cloud.microsoft
 assert.strictEqual(T.webUrl({ site: "slack", url: "https://x.slack.com/archives/C1/p1?thread_ts=1.2" }), "https://x.slack.com/messages/C1/p1?thread_ts=1.2");
 assert.strictEqual(T.webUrl({ site: "slack", url: "https://app.slack.com/client/T1/C1" }), "https://app.slack.com/client/T1/C1");
 assert.strictEqual(T.webUrl({ url: "https://chat.google.com/room/a/b/c" }), "https://chat.google.com/room/a/b/c");
+// Todos: reminders without a time. Never due, listed after timed ones (oldest first), labelled "On your todo list".
+{
+  const todo = { id: "t", when: null, created: 2 };
+  assert.strictEqual(T.isTodo(todo), true);
+  assert.strictEqual(T.isTodo({ when: now }), false);
+  assert.strictEqual(T.isDue(todo, now), false);
+  assert.strictEqual(T.isDue({ when: now - 1 }, now), true);
+  assert.strictEqual(T.isDue({ when: now - 1, done: now }, now), false);
+  assert.strictEqual(T.isDue({ when: now + 1 }, now), false);
+  const sorted = [todo, { id: "late", when: now + 2 }, { id: "old", when: null, created: 1 }, { id: "soon", when: now + 1 }].sort(T.byWhen);
+  assert.deepStrictEqual(sorted.map((r) => r.id), ["soon", "late", "old", "t"]);
+  assert.deepStrictEqual(T.reminderLabels({ t: { ...todo, url: link("msgTTTTTTTT") } }, now, fmt), {
+    msgTTTTTTTT: { text: "On your todo list", overdue: false, ids: ["t"] },
+  });
+  // List filters: all, only reminders with a time, only todos. Unknown keys show everything.
+  assert.deepStrictEqual(T.LIST_FILTERS, ["all", "timed", "todo"]);
+  assert.deepStrictEqual(sorted.filter((r) => T.matchesFilter(r, "timed")).map((r) => r.id), ["soon", "late"]);
+  assert.deepStrictEqual(sorted.filter((r) => T.matchesFilter(r, "todo")).map((r) => r.id), ["old", "t"]);
+  assert.strictEqual(sorted.filter((r) => T.matchesFilter(r, "all")).length, 4);
+  assert.strictEqual(sorted.filter((r) => T.matchesFilter(r, "junk")).length, 4);
+  // A timed reminder on the same message wins over the todo.
+  assert.strictEqual(T.reminderLabels({ t: { ...todo, url: link("msgTTTTTTTT") }, u: { id: "u", when: now + 60e3, url: link("msgTTTTTTTT") } }, now, fmt).msgTTTTTTTT.text, `Reminder set for @${now + 60e3}`);
+}
 assert.ok(T.compareVersions("1.10.0", "1.9.2") > 0);
 assert.ok(T.compareVersions("1.0.0", "1.0.1") < 0);
 assert.strictEqual(T.compareVersions("1.0", "1.0.0"), 0);
@@ -92,6 +115,14 @@ assert.strictEqual(T.compareVersions("1.0", "1.0.0"), 0);
   };
   assert.deepStrictEqual(T.activeForMessage(reminders, { url: link("msgAAAAAAAA") }), ["b", "a"]);
   assert.deepStrictEqual(T.activeForMessage(reminders, { url: link("msgCCCCCCCC") }), []);
+  // Todos count too: a reminder and a todo on the same message replace each other. Timed ones come first.
+  const withTodo = { ...reminders, t: { id: "t", when: null, url: link("msgCCCCCCCC") }, u: { id: "u", when: 3, url: link("msgCCCCCCCC") } };
+  assert.deepStrictEqual(T.activeForMessage(withTodo, { url: link("msgCCCCCCCC") }), ["u", "t"]);
+  // Reactivating a completed one: the other active ones on its message are what it replaces.
+  const back = { ...withTodo, c: { ...withTodo.c } };
+  assert.deepStrictEqual(T.othersForMessage(back, "c"), ["b", "a"]);
+  assert.deepStrictEqual(T.othersForMessage(back, "u"), ["t"]);
+  assert.deepStrictEqual(T.othersForMessage(back, "missing"), []);
   // Reminders without a message id (space/DM links, manual ones) are never merged.
   assert.deepStrictEqual(T.activeForMessage(reminders, { url: "https://chat.google.com/app/chat/sJEKDqAAAAE" }), []);
   assert.deepStrictEqual(T.activeForMessage(reminders, undefined), []);

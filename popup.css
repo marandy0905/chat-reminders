@@ -13,7 +13,6 @@ body { width: 480px; margin: 0; padding: 20px 12px 12px; background: var(--bg); 
 
 header { display: flex; align-items: flex-end; justify-content: space-between; padding: 0 12px 12px; }
 h1 { margin: 0; font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: -.022em; }
-#sub { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
 #all { padding: 4px 10px; margin-right: -10px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--accent); text-decoration: none; transition: background .15s; }
 #all:hover { background: var(--fill); }
 
@@ -36,6 +35,10 @@ li:active { transform: scale(.992); }
 .meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--muted); }
 .meta .site { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--site) 16%, transparent); color: color-mix(in srgb, var(--site) 70%, var(--fg)); font-weight: 600; }
 .meta .due { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--danger) 14%, transparent); color: var(--danger); font-weight: 600; }
+.rt-filter { display: flex; gap: 6px; padding: 0 12px 8px; }
+.rt-filter button { padding: 4px 11px; font-size: 12px; color: var(--muted); background: var(--fill); }
+.rt-filter button.rt-filter-on { color: var(--bg); background: var(--accent); }
+.meta .todo { padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--fg); font-weight: 600; }
 
 .actions { display: flex; align-items: center; gap: 2px; opacity: 0; transition: opacity .15s; }
 li:hover .actions, li:focus-within .actions { opacity: 1; }
