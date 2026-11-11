@@ -68,7 +68,7 @@ function chatTheme(el) {
 // Their labels must not end up in the reminder text. Selectors are best effort (Chat's markup is obfuscated).
 // Shift+click on the clock button copies what the extension sees (hover chain + extracted result + the site's own
 // details) to the clipboard, for debugging selectors against the app's real markup.
-async function copyDebug(row) {
+async function copyDebug(row, reason) {
   // Ancestry of the point the mouse was on (up to 30 levels) with per-level stats, to find where one message ends.
   const hoverChain = [];
   for (let el = lastTarget, i = 0; el && el !== document.body && i < 30; el = el.parentElement, i++) {
@@ -82,9 +82,11 @@ async function copyDebug(row) {
     });
   }
   const info = {
+    ...(reason ? { reason } : {}),
     site: GCRSite.id,
     extracted: GCRSite.extract(row),
     key: GCRSite.rowKey(row),
+    rowConnected: row.isConnected,
     permalink: GCRSite.permalink(row),
     anchorFound: !!GCRSite.toolbarAnchor(row, lastTarget),
     hoverChain,
@@ -93,18 +95,20 @@ async function copyDebug(row) {
   };
   try {
     await navigator.clipboard.writeText(JSON.stringify(info, null, 2));
-    toast("Debug info copied to clipboard");
+    if (!reason) toast("Debug info copied to clipboard");
+    return true;
   } catch (_) {
-    toast("Couldn't copy debug info");
+    if (!reason) toast("Couldn't copy debug info");
+    return false;
   }
 }
 
-function toast(text) {
+function toast(text, ms = 2500) {
   const el = document.createElement("div");
-  el.className = "gcr-toast";
+  el.className = ms > 2500 ? "gcr-toast gcr-toast-error" : "gcr-toast";
   el.textContent = text;
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2500);
+  setTimeout(() => el.remove(), ms);
 }
 
 function send(msg) {
@@ -117,9 +121,18 @@ function send(msg) {
 
 async function remindAt(row, when) {
   try {
+    // The app may have re-rendered the message while the menu was open: read from the live copy, not the detached one.
+    if (!row.isConnected) row = findRow(GCRSite.rowKey(row)) || row;
+    const url = GCRSite.permalink(row);
+    // A reminder that can't open its message is no use: refuse it, and copy what the extension saw for debugging.
+    if (GCRSite.isMessageLink && !GCRSite.isMessageLink(url)) {
+      const copied = await copyDebug(row, "no message id in link");
+      toast(RTime.t(copied ? "toast_no_link_copied" : "toast_no_link"), 8000);
+      return;
+    }
     const { text, sender } = GCRSite.extract(row);
     const key = GCRSite.messageKey ? GCRSite.messageKey(row) : undefined;
-    await send({ type: "add", text: text.slice(0, SNIPPET_LEN), sender, when, url: GCRSite.permalink(row), source: "message", site: GCRSite.id, key });
+    await send({ type: "add", text: text.slice(0, SNIPPET_LEN), sender, when, url, source: "message", site: GCRSite.id, key });
     toast(when == null ? RTime.t("toast_todo") : RTime.t("toast_set", { when: RTime.formatDay(when, Date.now()) }));
   } catch (e) {
     toast(RTime.t("toast_fail"));

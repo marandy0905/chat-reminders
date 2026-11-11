@@ -130,6 +130,12 @@ assert.strictEqual(T.compareVersions("1.0", "1.0.0"), 0);
   // Reminders without a message id (space/DM links, manual ones) are never merged.
   assert.deepStrictEqual(T.activeForMessage(reminders, { url: "https://chat.google.com/app/chat/sJEKDqAAAAE" }), []);
   assert.deepStrictEqual(T.activeForMessage(reminders, undefined), []);
+  // Chat stores the message id as the key: it matches older reminders by their link, even when this link fell back
+  // to the space (no message id in it).
+  const space = "https://chat.google.com/app/chat/sJEKDqAAAAE";
+  assert.deepStrictEqual(T.activeForMessage(reminders, { key: "msgAAAAAAAA", url: space }), ["b", "a"]);
+  const keyed = { k: { id: "k", when: 1, key: "msgEEEEEEEE", url: space } };
+  assert.deepStrictEqual(T.activeForMessage(keyed, { url: link("msgEEEEEEEE") }), ["k"]);
   // Slack/Teams match on the stored key within their own site, never across sites.
   const slack = { s: { id: "s", when: 1, site: "slack", key: "C1/1700.1", url: "https://x.slack.com/archives/C1/p1" } };
   assert.deepStrictEqual(T.activeForMessage(slack, { site: "slack", key: "C1/1700.1" }), ["s"]);

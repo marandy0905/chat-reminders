@@ -139,18 +139,26 @@ function spaceId() {
   return "";
 }
 
-function permalink(row) {
-  // Message id: the single-message element's data-id ("MSG_LIST/yt/<id>"); topic id: the enclosing thread.
+// Message id: the single-message element's data-id ("MSG_LIST/yt/<id>"), else the older views' attributes.
+function messageId(row) {
   const msgEl = row.closest("[data-message-multiplat-item-id]");
-  const topicEl = row.closest("[data-topic-id]") || row.querySelector("[data-topic-id]");
-  const topic = lastToken(topicEl && topicEl.getAttribute("data-topic-id"));
-  const msg =
+  const topicEl = row.closest("[data-topic-id]");
+  return (
     lastToken(msgEl && (msgEl.getAttribute("data-id") || msgEl.getAttribute("data-message-multiplat-item-id"))) ||
     lastToken((row.closest("[data-message-id]") || row).getAttribute("data-message-id")) ||
-    topic;
+    lastToken(topicEl && topicEl.getAttribute("data-topic-id"))
+  );
+}
+
+function permalink(row) {
+  // The hover toolbar inside a message is also tagged with data-topic-id, so it is skipped; a topic id that doesn't
+  // look like one (e.g. a row Chat has since re-rendered and detached) falls back to the message's own id.
+  const msg = messageId(row);
+  const topicEl = row.closest("[data-topic-id]") || [...row.querySelectorAll("[data-topic-id]")].find((el) => !el.matches(TOOLBAR));
+  const topic = lastToken(topicEl && topicEl.getAttribute("data-topic-id"));
   const space = spaceId();
-  if (space && ID_RE.test(topic || msg) && ID_RE.test(msg)) {
-    return `https://chat.google.com/room/${space}/${topic || msg}/${msg}?cls=10`;
+  if (space && ID_RE.test(msg)) {
+    return `https://chat.google.com/room/${space}/${ID_RE.test(topic) ? topic : msg}/${msg}?cls=10`;
   }
   return location.href; // couldn't identify the message: open the space/DM instead
 }
@@ -341,8 +349,11 @@ const GCRSite = {
   isToolbar: (el) => !!el.closest(TOOLBAR),
   extract,
   permalink,
-  // Chat labels are keyed by the message id in the saved link (RTime.messageIdOf), so no key is stored.
-  messageKey: null,
+  // permalink() falls back to the space's address when it can't identify the message.
+  isMessageLink: (url) => !!RTime.messageIdOf(url),
+  // The message id, stored with the reminder so the same message is recognised even when its link couldn't be
+  // built (labels use it too; older reminders without one fall back to the id in the link, RTime.messageIdOf).
+  messageKey: (row) => (ID_RE.test(messageId(row)) ? messageId(row) : undefined),
   rows: () => document.querySelectorAll(SELECTORS.messageRow),
   rowKey: (row) => row.getAttribute("data-id"),
   labelHost: (row) => row,

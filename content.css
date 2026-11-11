@@ -51,6 +51,7 @@
   padding: 10px 18px; border-radius: 6px; background: #323232; color: #fff;
   font: 13px Roboto, Arial, sans-serif;
 }
+.gcr-toast-error { background: #b3261e; max-width: min(520px, calc(100vw - 32px)); }
 .gcr-launcher {
   position: fixed; z-index: 1000; top: 10px; left: 210px; height: 40px; min-width: 40px; padding: 0 12px;
   display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 20px;
