@@ -26,7 +26,8 @@ async function add({ text, sender, when, url, source, site, key }) {
     text: String(text || "Reminder").slice(0, 500),
     sender: String(sender || "").slice(0, 100),
     when: Number.isFinite(when) ? when : null, // null: a todo
-    url: url || RTime.SITES[site].home,
+    // Keep the earlier link when this one couldn't name the message (it only opens the space).
+    url: (keep && !RTime.messageIdOf(url) && RTime.messageIdOf(all[keep].url) ? all[keep].url : url) || RTime.SITES[site].home,
     source: source || "manual",
     site,
     created: Date.now(),
